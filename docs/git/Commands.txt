@@ -1,0 +1,91 @@
+----------------------
+1) To Feature Branch
+----------------------
+git switch [-c] feature/[feature name] 
+{-c for creating new branch}
+git branch
+
+git status
+
+git diff
+
+git diff --cached
+
+git add .
+
+git status
+
+git commit -m "Commit Message"
+
+git push -u origin feature/[feature name]
+
+-------------------------------
+2) Merge Feature to Develop
+-------------------------------
+git switch develop
+
+git pull origin develop
+
+git merge feature/project-setup
+
+git push origin develop
+
+----------------------------
+3) Production Release
+---------------------------
+git switch main
+
+git pull origin main
+
+git merge develop
+
+git push origin main
+
+----------------------------
+4) Release Tag
+---------------------------
+git tag -a v1.0.0 -m "DazzBizzSuiteERP version 1.0.0"
+
+git push origin v1.0.0
+
+
+----------------------------
+5) Delete Completed branch 
+---------------------------
+git branch -d feature/project-setup
+
+git push origin --delete feature/project-setup
+
+
+
+---------------
+* Work Flow *
+---------------
+develop
+    ↓
+create feature branch
+    ↓
+write code
+    ↓
+test
+    ↓
+git add
+    ↓
+git commit
+    ↓
+git push
+    ↓
+merge into develop
+    ↓
+test
+    ↓
+release to main
+
+--------------
+Key Points
+--------------
+main       = Production / stable code
+develop    = Integration / testing
+feature/* = Actual development
+
+
