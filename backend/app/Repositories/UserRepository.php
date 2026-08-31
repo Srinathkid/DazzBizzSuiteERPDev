@@ -2,7 +2,6 @@
 
 namespace App\Repositories;
 
-use App\Models\User as ModelsUser;
 use App\Models\User;
 use App\Repositories\Contracts\RepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
@@ -29,8 +28,10 @@ class UserRepository implements RepositoryInterface
         $user = User::find($id);
         if ($user) {
             $user->update($data);
+
             return $user->fresh();
         }
+
         return null;
     }
 
@@ -38,8 +39,9 @@ class UserRepository implements RepositoryInterface
     {
         $user = User::find($id);
         if ($user) {
-            return (bool)$user->delete();
+            return (bool) $user->delete();
         }
+
         return false;
     }
 }

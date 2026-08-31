@@ -1,0 +1,501 @@
+07-Aug-2026
+1)Create project structure
+2)Create git repositry
+3)Set php 8.4 so that laravel latest version 13 can run
+3.1)modify php.ini file 
+3.2)set php path to environment variables. latest version should be on the top ahead of xamp php
+4)install laravel using composer "composer create-project laravel/laravel backend"
+5)start the apache and mysql service using xamp
+6)create database with collation "utf8mb4_unicode_ci"
+7)update the backend/.env file with database values
+8)Generate application key using "php artisan key:generate"
+9)Test Database connection usng "php artisan migrate"
+9.1)if success laravel will create default tables
+9.2)open db to verify created default tables
+10)start laravel server using "php artisan serve"
+10.1)check the link "http://127.0.0.1:8000" will open laravel welcome page
+11)Install API support using "php artisan install:api"
+
+08-Aug-2026
+12)Verify API routes using "php artisan route:list"
+13)Create health controller using "php artisan make:controller API/V1/HealthController"
+14)Create the health controller to check the API using "php artisan make:controller API/V1/HealthController"
+14.1)File ceated under backend/app/Http/Controllers/API/V1/HealthController.php
+15)Create API routes: file in backend/routes/api.php
+16)Check the route using "php artisan route:list"
+17)Lists routes related only to the apis "php artisan route:list --path=api"
+18)Start the laravel server
+18.1)"php artisan serve"
+18.2)Test the API in browser "http://127.0.0.1:8000/api/v1/health"
+19)Run Laravel Test
+19.1)"php artisan test"
+
+20)Run Code Formatting 
+20.1)vendor/bin/pint --test
+20.2)if failed run "vendor/bin/pint"
+20.3)Again run "vendor/bin/pint --test"
+
+21)Commit the changes to the git "feature/laravel-backend-setup"
+
+22)Verify MYSQL DB connection
+22.1)Check DB credentials and setup in .env files
+22.2)Clear laravel configuration cache "php artisan config:clear" and "php artisan cache:clear"
+22.3)Test the database "php artisan migrate:status"
+22.4)Run the migration "php artisan migrate"
+22.5)Test the database "php artisan migrate:status"
+
+Milestone M1.2
+23)New git branch for M1.2 created "feature/backend-architecture"
+24) New directories created inside backend/app
+mkdir app\Constants
+mkdir app\Enums
+mkdir app\Exceptions
+mkdir app\Helpers
+mkdir app\Repositories
+mkdir app\Services
+mkdir app\Traits
+25)Defined API Response standards
+25.1)Successful Response
+{
+    "success": true,
+    "message": "Customer retrieved successfully.",
+    "data": {}
+}
+25.2)List response
+{
+    "success": true,
+    "message": "Customers retrieved successfully.",
+    "data": [],
+    "meta": {
+        "current_page": 1,
+        "per_page": 15,
+        "total": 100
+    }
+}
+25.3)Validation error
+{
+    "success": false,
+    "message": "Validation failed.",
+    "errors": {
+        "name": [
+            "The name field is required."
+        ]
+    }
+}
+25.4)Authentication error
+{
+    "success": false,
+    "message": "Unauthenticated.",
+    "data": null
+}
+25.5)Server error
+{
+    "success": false,
+    "message": "Something went wrong.",
+    "data": null
+}
+
+10-Aug-2026
+26)Create base API Controller using "php artisan make:controller API/V1/BaseApiController"
+27)Update HealthController which extends BaseApiController and change the return response
+
+M1.2 Step 1 completed
+M1.2 Step 2 started
+28)Global Exception handling
+Controlled response for exception commonly all over the project
+28.1)Update exception in backend/bootstrap/app.php 
+
+M1.2 Step 2 completed
+M1.2 Step 3 Standart Validation Process
+29)Standart Validation Process
+29.1)Create test request using "php artisan make:request TestValidationRequest"
+29.1.1)File under "backend/app/http/request/........."
+29.2)Create TestValidationController usign "php artisan make:controller API/V1/TestValidationController"
+29.3)Add rout in "backend/routes/api.php"
+30)Clear Laravel cache using "php artisan optimize:clear"
+
+12-Aug-2026
+
+M1.2 Step 4 CORS - Cross Origin Resouce Sharing
+31)Create CORS file using "php artisan config:publish cors"
+32)Configure backend/config/cors.php
+
+13-Aug-2026
+M1.2 Step 5 Service Layer
+33)Create a baseservice using "php artisan make:class Serices/baseservice
+
+14-Aug-2026
+M1.2 Step 6 Repository Layer
+34)Create Reporsitory directory "mkdir app\Repositories\Contracts\
+35)Register repository with laravel using "php artisan make:provider RepositoryServiceProvider"
+35.1)File created in app/Providers/RepositoryServiceProvider.php
+35.2)Verify the registered provider in "backend/bootstrap/providers.php"
+36)Create a temporary controller using "php artisan make:controller API/V1/TestRepositoryController"
+37)Add temporary get route in "backend/routes/api.php"
+
+M1.2 Step 7 Logging Foundation
+38)Check .env having the following value for development
+LOG_CHANNEL=stack
+LOG_STACK=single
+LOG_LEVEL=debug
+39)Add temporary routes to the api.php file
+
+use Illuminate\Support\Facades\Log;
+
+
+Route::get('/test-log', function () {
+
+    Log::info('DazzBizzSuiteERP test log', [
+        'module' => 'M1.2',
+        'step' => '7',
+    ]);
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Logging test successful.',
+        'data' => null,
+    ]);
+});
+
+40)Test using "http://127.0.0.1:8000/api/v1/test-log"
+40.1)Find log in "backend/storage/logs/laravel.log"
+41)Remove temporary logs
+
+M1.2 Step 8 Environment and configuration
+42)Environment => Development->Testing->Production
+43)Create an application configuration file "backend/config/dazzbizz.php"
+44)Add "INVOICE_PREFIX=DEIT" to .env file 
+45)php artisan optimize:clear
+46)php artisan tinker
+46.1)config('dazzbizz.name');
+46.2)config('dazzbizz.api.version');
+46.3)config('dazzbizz.invoice.prefix');
+46.4)exit
+
+M1.2 Step 9 Authentication Foundation
+
+Using Laravel Sanctum with SPA authentication rather than manually creating our own token system.
+
+47)Verify Sanctum 
+47.1)"php artisan about"
+47.2)php artisan route:list --path=sanctum
+47.3)php artisan migrate:status
+
+15-Aug-2026
+Step 9.1
+48)Check user mode "backend\app\Models\User.php"
+48.1)Add the following
+use Laravel\Sanctum\HasApiTokens;
+
+use HasApiTokens, HasFactory, Notifiable;
+
+protected $fillable = [
+        'name',
+        'email',
+        'password',
+    ];
+
+    protected $hidden = [
+        'password',
+        'remember_token',
+    ];
+
+
+49)Configure SPA(Single Page Authentication) Authentication Middleware
+49.1)Open "backend\bootstrap\app.php"
+49.2)Modify
+->withMiddleware(function (Middleware $middleware): void {
+    $middleware->statefulApi();
+})
+
+React
+   │
+   │ Sanctum authentication
+   ▼
+Laravel
+   │
+   ├── CSRF (Cross Site Request Forgery) protection
+   ├── Session authentication
+   └── Protected API
+
+50)Add "SANCTUM_STATEFUL_DOMAINS=localhost:5173,127.0.0.1:5173" in env file
+
+M1.2 Step 9.2 Build Secure login API
+51)php artisan make:migration add_username_to_users_table --table=users
+51.1)EDit the migration file add_username_to_users_table.php
+51.2)php artisan migrate
+52)Update "backend/app/Models/User.php" file protected $fillable=['username','name', 'email', 'password'];
+53)Create Authentication Controller "php artisan make:controller API/V1/AuthController"
+54)Create Login Request "php artisan make:request LoginRequest"
+55)Edit Auth Controller
+56)Add Auth Routes in api.php
+57)Create test user
+57.1)php artisan tinker 
+57.2)execute the command
+ User::create([                                                                               
+. 'username'=>'admin',                                                                         
+. 'name'=>'Administrator',                                                                     
+. 'email'=>'admin@dazzexports.com',                                                            
+. 'password'=>Hash::make('admin@123'),                                                         
+. ]);   
+58)start the server
+
+20-Aug-2026
+59)temporary solution for sanctum authentication
+59.1)Get XSRF-TOKEN from the GET method http://127.0.0.1:8000/sanctum/csrf-cookie
+59.2)In header add 
+Accept:application/json
+//Content-Type:application/json
+Origin:http://localhost:5173
+59.3)Copy values for XSRF-TOKEN from cookies from the response
+59.4)Open powershell and decode the token value using the command [System.Net.WebUtility]::UrlDecode(" ")
+59.5)Paste the decoded token in login api request header under lable "X-XSRF-TOKEN"
+59.6)Test the login api
+
+
+21-Aug-2026
+M1.2 Step 9.3 Test /me Authentication
+60)Use [GET] http://127.0.0.1:8000/api/v1/me
+Accept:application/json
+Origin:http://localhost:5173
+61)Logout
+61.1)http://127.0.0.1:8000/api/v1/logout
+Accept:application/json
+Origin:http://localhost:5173
+X-XSRF-TOKEN:[token value]
+
+M1.2 Step 10
+
+M1.2 Step 10
+│
+├── 10.1 Design roles/permissions
+├── 10.2 Create roles table
+├── 10.3 Create permissions table
+├── 10.4 Create role_permission relationship
+├── 10.5 Add role to users
+├── 10.6 Create authorization middleware
+├── 10.7 Protect sample API
+├── 10.8 Test Admin
+├── 10.9 Test Billing/Store/Manager
+└── 10.10 Security review
+
+
+M1.2 Step 10.1 
+62)Role and Persmission Design
+62.1)Role Based Access Control Structure (RBAC)
+
+M1.2 Step 10.2
+63)Create Roles table
+63.1)php artisan make:migration create_roles_table
+63.2) Add in backend/database/migrations/
+  $table->string('name', 100);
+  $table->string('slug', 100)->unique();
+  $table->text('description')->nullable();
+  $table->boolean('is_active')->default(true);
+63.3)php artisan migrate
+
+64)add role_id and is_active in users table 
+64.1)php artisan make:migration add_role_idand_is_active_to_users_table.php
+ public function up(): void
+    {
+         Schema::table('users', function (Blueprint $table) {
+           $table->foreignId('role_id')
+           ->nullable()
+           ->after('password')
+           ->constrained('roles')
+           ->nullOnDelete();
+           
+           $table->boolean('is_active')
+           ->default(true)
+           ->after('role_id');
+           });
+    }
+
+public function down(): void
+    {
+        Schema::table('users', function (Blueprint $table) {
+            $table->dropForeign(['role_id']);
+            $table->dropColumn('role_id');
+            $table->dropColumn('is_active');
+        });
+    }
+
+M1.2 Step 10.3
+
+65)Create permision table using "php artisan make:migration create_permisisons_table"
+66)Create permision Models
+66.1) Permisison.php under app/Models/Permission.php
+
+67)Create permission seeder
+67.1)php artisan make:seeder PermissionSeeder
+67.2)backend/database/seeders/PermissionSeeder.php
+67.3)Enter the values in the PermissionSeeder.php Update the DB Seeder DatabaseSeeder.php
+67.4)php artisan db:seed to update the seed
+67.5)Verify the seed data 
+php artisan tinker
+App\Models\Permission::count();
+App\Models\Permission::pluck('slug');
+exit
+
+23-Aug-2026
+
+M1.2 Step 10.4 Role <---> permission relationship
+68)php artisan make:migration create_role_permissions_table
+68.1)
+$table->foreignId('role_id')
+                ->constrained('roles')
+                ->cascadeOnDelete();
+
+            $table->foreignId('permission_id')
+                ->constrained('permissions')
+                ->cascadeOnDelete();
+
+            $table->primary(['role_id', 'permission_id']);
+
+68.2)Why composite primary key?
+Prevents the same permission from being assigned to the same role twice.
+For relationship/pivot table there wont id, created_at, updated_at
+68.3)php artisan migrate
+
+69)Update Role Model
+69.1)php artisan make:model Role
+69.2)Add role details in "app/Models/Role.php"
+
+70)Add Role realtionship to User in "app/Models/User.php"
+71)php artisan tinker
+>App\Models\Role::count();
+>App\Models\Permission::count();
+>App\Models\Role::first();
+>exit
+
+72)Create Role Seeder
+72.1)php artisan make:seeder RoleSeeder
+72.2)Open "database/seeders/RoleSeeder.php"
+
+73)Register Role seeder
+73.1)database/seeders/DatabaseSeeder.php
+ $this->call([
+            RoleSeeder::class,
+            PermissionSeeder::class,
+        ]);
+73.2)The order is important
+RoleSeeder
+     ↓
+PermissionSeeder
+
+73.3)php artisan db:seed
+73.4)php artisan tinker
+>App\Models\Role::pluck('slug');
+>App\Models\Permission::count();
+>$role = App\Models\Role::where('slug', 'admin')->first();
+>$role->permissions()->count();
+//add permission manually
+>$permission = App\Models\Permission::where('slug', 'sales.view')->first();
+>$role->permissions()->attach($permission->id);
+>$role->permissions()->count();
+>$role->permissions->pluck('slug');
+
+//test reverse relationship Permision->Role
+>$permission->roles->pluck('slug');
+
+//Test ok remove the temporary assignment
+>$role->permissions()->detach($permission->id);
+>$role->permissions()->count();
+>exit
+
+M1.2 Step 10.5 
+Authorization Methods
+
+74)Update the user Model in "backend/app/Models/User.php"
+74.1)hasRole(string $role)
+74.2)hasPermission(string $permissions)
+74.3)hasAnyPermission(array $permissions)
+74.4)hasAllPermission(array $permissions)
+74.5)Add helper methods to role 
+74.6)backend/app/Models/Role.php
+
+75)Seed Role Permission
+75.1)php artisan make:seeder RolePermissionSeeder
+75.2)Open backend/database/seeders/RolePermissionSeeder.php
+75.3)Why we use sync()?
+Laravel will synchronize the role's permissions rather than continually inserting duplicates.
+75.4)php artisan db:seed
+75.5)php artisan tinker
+>$admin = App\Models\Role::where('slug', 'admin')->first();
+>$admin->permissions()->count();
+>$admin->hasPermission('sales.create');
+>$admin->hasPermission('reports.export');
+
+//test Billing
+>$billing = App\Models\Role::where('slug', 'billing')->first();
+>$billing->hasPermission('sales.create');
+>$billing->hasPermission('stock.create');
+
+//test Store
+>$store = App\Models\Role::where('slug', 'store')->first();
+>$store->hasPermission('stock.create');
+>$store->hasPermission('sales.create');
+
+//test Manager
+>$manager = App\Models\Role::where('slug', 'manager')->first();
+>$manager->hasPermission('reports.export');
+>$manager->hasPermission('sales.create');
+
+//test through actual user
+>$user = App\Models\User::where('username', 'admin')->first();
+>$role = App\Models\Role::where('slug', 'admin')->first();
+>$role;
+>$user->role_id = $role->id;
+>$user->save();
+>$user->refresh();
+>$user->role_id;
+>$user->role;
+>$user->role->slug;
+
+//test authorization methods
+>$user->hasRole('admin');
+>$user->hasPermission('sales.create');
+>$user->hasPermission('reports.export');
+
+//security test
+>$user->is_active = false;
+>$user->save();
+>$user->hasPermission('sales.create');
+>$user->is_active = true;
+>$user->save();
+
+27-Aug-2026
+M1.2 Step 10.6 Permision Middleware
+
+76)Create middleware
+76.1)php artisan make:middleware CheckPermission
+76.2)create a test endpoint open routes/api.php and add
+Route::middleware(['auth:sanctum', 'permission:sales.create'])
+    ->get('/v1/test-permission', function () {
+        return response()->json([
+            'success' => true,
+            'message' => 'Permission check successful.',
+            'data' => null,
+        ]);
+    });
+76.3)Route is GET /api/v1/test-permission 
+//Header
+Accept: application/json
+Origin: http://localhost:5173
+
+76.4)Check the route 
+php artisan route:list --path=api/v1
+//Specifically check 
+php artisan route:list --path=test-permission
+
+76.5)clear laravel caches 
+
+29-Aug-2026
+Resolving errors in tet-permission api
+
+31-Aug-2026
+M1.2 Step 10.7 Testing
+
+M1.2 Step 10.8 Cerntralize API Response Format
+77)Create APIResponse Helper
+

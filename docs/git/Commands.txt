@@ -52,11 +52,14 @@ git push origin v1.0.0
 ----------------------------
 5) Delete Completed branch 
 ---------------------------
-git branch -d feature/project-setup
+git branch -d feature/[feature_name]
 
-git push origin --delete feature/project-setup
+git push origin --delete feature/[feature_name]
 
-
+-----------
+General
+-----------
+git branch --show-current -> to get curent branch name
 
 ---------------
 * Work Flow *

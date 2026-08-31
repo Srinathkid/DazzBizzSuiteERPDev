@@ -1,12 +1,14 @@
 <?php
 
+use App\Http\Middleware\CheckPermission;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
-// use Throwable;
+//use Throwable;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -18,13 +20,33 @@ return Application::configure(basePath: dirname(__DIR__))
 
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->statefulApi();
+
+        $middleware->alias(['permission' => CheckPermission::class]);
+
+        
     })
+
     ->withExceptions(function (Exceptions $exceptions): void {
         // Render API exception responses as JSON when the request is for an API route.
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*'),
         );
 
+        // Unauthenticated API requests
+        $exceptions->render(function (
+            AuthenticationException $e,
+            Request $request
+        ) {
+            if ($request->is('api/*')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthenticated.',
+                    'data' => null,
+                ], 401);
+            }
+        });
+
+        // Validation errors
         $exceptions->render(function (
             ValidationException $e,
             Request $request
@@ -38,6 +60,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 ], 422);
             }
         });
+
         // Standart API exception responses as JSON when the request is for an API route.
         $exceptions->render(function (
             Throwable $e,
@@ -48,8 +71,8 @@ return Application::configure(basePath: dirname(__DIR__))
                 return response()->json([
                     'success' => false,
                     // 'message; => $e->getMessage(),' /** Uncomment this line to show the exception message in the response. */
-                    //'message' => 'An unexpected error occurred. Please try again later.',
-                    //'data' => null,
+                    // 'message' => 'An unexpected error occurred. Please try again later.',
+                    // 'data' => null,
 
                     'message' => $e->getMessage(),
                     'exception' => get_class($e),
