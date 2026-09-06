@@ -3,11 +3,16 @@
 namespace App\Services;
 
 use App\Models\User;
+use App\Repositories\Contracts\UserRepositoryInterface;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 
 class AuthService
 {
+    public function __construct(
+        private readonly UserRepositoryInterface $userRepository
+    ) {}
+
     public function login(string $username, string $password): User
     {
         if (! Auth::guard('web')->attempt([
@@ -32,5 +37,10 @@ class AuthService
     public function user(): ?User
     {
         return Auth::guard('web')->user();
+    }
+
+    public function findUserByUsername(string $username): ?User
+    {
+        return $this->userRepository->findByUsername($username);
     }
 }

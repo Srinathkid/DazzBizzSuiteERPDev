@@ -4,9 +4,11 @@ use App\Http\Controllers\API\V1\AuthController;
 use App\Http\Controllers\API\V1\HealthController;
 use App\Http\Controllers\API\V1\TestRepositoryController;
 use App\Http\Controllers\API\V1\TestValidationController;
+use App\Http\Controllers\API\V1\UserController;
+use App\Support\ApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Support\ApiResponse;
+
 /*
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -24,30 +26,35 @@ Route::prefix('v1')->group(function () {
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/me', [AuthController::class, 'me']);
         Route::get('/auth-test', function () {
-        return response()->json([
-            'success' => true,
-            'message' => 'Authentication successful.',
-            /*'data' => [
-                'user_id' => $request->user()->id,
-                'username' => $request->user()->username,
-            ],*/
-        ]);
-    });
+            return response()->json([
+                'success' => true,
+                'message' => 'Authentication successful.',
+                /*'data' => [
+                    'user_id' => $request->user()->id,
+                    'username' => $request->user()->username,
+                ],*/
+            ]);
+        });
         Route::post('/logout', [AuthController::class, 'logout']);
     });
 
     Route::middleware(['auth:sanctum', 'permission:sales.create'])
-    ->get('/test-permission', function () {
-       return ApiResponse::success('Permission check successful.');
+        ->get('/test-permission', function () {
+            return ApiResponse::success('Permission check successful.');
+        });
+
+    // User Routes
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::get('/users/{id}', [UserController::class, 'show']);
     });
 
-    //Route::middleware('auth:sanctum')
-   /* Route::get('/test-permission', function () {
-        return response()->json([
-            'success' => true,
-            'message' => 'Auth middleware successful.',
-            'data' => null,
-        ]);
-    });*/
+    // Route::middleware('auth:sanctum')
+    /* Route::get('/test-permission', function () {
+         return response()->json([
+             'success' => true,
+             'message' => 'Auth middleware successful.',
+             'data' => null,
+         ]);
+     });*/
 
 });

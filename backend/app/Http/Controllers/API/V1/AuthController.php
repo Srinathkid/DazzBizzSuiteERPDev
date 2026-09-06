@@ -2,13 +2,14 @@
 
 namespace App\Http\Controllers\API\V1;
 
-use App\Http\Controllers\Controller;
 use App\Http\Requests\LoginRequest;
+use App\Http\Resources\UserResource;
 use App\Services\AuthService;
+use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-class AuthController extends Controller
+class AuthController extends BaseApiController
 {
     public function __construct(private readonly AuthService $authService) {}
 
@@ -21,24 +22,30 @@ class AuthController extends Controller
 
         $request->session()->regenerate();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Login Successful',
-            'data' => [
-                'user' => $user,
-            ],
-        ]);
+        return ApiResponse::success(
+            'Login Successful',
+            [
+                'user' => new UserResource($user),
+            ]
+        );
     }
 
     public function me(Request $request): JsonResponse
     {
-        return response()->json([
+        /*return response()->json([
             'success' => true,
             'message' => 'Authenticated User',
             'data' => [
                 'user' => $request->user(),
             ],
-        ]);
+        ]);*/
+
+        return ApiResponse::success(
+            'Authenticated User',
+            ['user' => new UserResource($request->user())]
+
+        );
+
     }
 
     public function logout(Request $request): JsonResponse

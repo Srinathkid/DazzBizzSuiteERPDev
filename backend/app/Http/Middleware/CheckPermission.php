@@ -17,7 +17,7 @@ class CheckPermission
     {
         $user = $request->user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthenticated.',
@@ -25,7 +25,7 @@ class CheckPermission
             ], 401);
         }
 
-       if (!$user->hasPermission($permission)) {
+        if (! $user->hasPermission($permission)) {
             return response()->json([
                 'success' => false,
                 'message' => 'You do not have permission to perform the action.',
@@ -35,23 +35,23 @@ class CheckPermission
 
         return $next($request);
 
-     /*return response()->json([
-            'success' => true,
-            'message' => 'Authenticated inside permission middleware.',
-            'data' => [
-                'user_id' => $user->id,
-                'username' => $user->username,
-                'permission_requested' => $permission,
-            ],
-        ]);*/
+        /*return response()->json([
+               'success' => true,
+               'message' => 'Authenticated inside permission middleware.',
+               'data' => [
+                   'user_id' => $user->id,
+                   'username' => $user->username,
+                   'permission_requested' => $permission,
+               ],
+           ]);*/
 
-      /* return response()->json([
-        'success' => true,
-        'message' => 'CheckPermission reached.',
-        'data' => [
-            'user' => $user?->username,
-            'permission' => $permission,
-        ],
+        /* return response()->json([
+          'success' => true,
+          'message' => 'CheckPermission reached.',
+          'data' => [
+              'user' => $user?->username,
+              'permission' => $permission,
+          ],
     ]);  */
 
     }
