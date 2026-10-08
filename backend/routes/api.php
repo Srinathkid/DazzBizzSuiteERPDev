@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\API\V1\AuthController;
+use App\Http\Controllers\API\V1\EmployeeController;
 use App\Http\Controllers\API\V1\HealthController;
 use App\Http\Controllers\API\V1\TestRepositoryController;
 use App\Http\Controllers\API\V1\TestValidationController;
@@ -46,6 +47,27 @@ Route::prefix('v1')->group(function () {
     // User Routes
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/users/{id}', [UserController::class, 'show']);
+    });
+
+    // Employee Routes
+    Route::middleware('auth:sanctum')->group(function () {
+        //Route::apiResource('employees', EmployeeController::class);
+
+        Route::get('/employees', [EmployeeController::class,'index'])
+        ->middleware('permission:employees.view');
+
+        Route::post('/employees', [EmployeeController::class,'store'])
+        ->middleware('permission:employees.create');
+
+        Route::get('/employees/{employee}', [EmployeeController::class,'show'])
+        ->middleware('permission:employees.view');
+
+        Route::put('/employees/{employee}', [EmployeeController::class,'update'])
+        ->middleware('permission:employees.update');
+
+        Route::delete('/employees/{employee}', [EmployeeController::class,'destroy'])
+        ->middleware('permission:employees.delete');
+        
     });
 
     // Route::middleware('auth:sanctum')

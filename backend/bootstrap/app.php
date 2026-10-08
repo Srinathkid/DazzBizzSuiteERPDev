@@ -2,11 +2,13 @@
 
 use App\Http\Middleware\CheckPermission;
 use Illuminate\Auth\AuthenticationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 // use Throwable;
 
@@ -57,6 +59,21 @@ return Application::configure(basePath: dirname(__DIR__))
                     'message' => 'Validation Failed',
                     'errors' => $e->errors(),
                 ], 422);
+            }
+        });
+
+        // Model not found errors
+        $exceptions->render(function (
+            NotFoundHttpException $e,
+            Request $request
+        ) {
+            if ($request->is('api/*')) {
+                //$model = class_basename($e->getModel());
+                return response()->json([
+                    'success' => false,
+                    'message' => " Resource not found.",
+                    'data' => null,
+                ], 404);
             }
         });
 

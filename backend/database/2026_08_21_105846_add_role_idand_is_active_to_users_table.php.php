@@ -20,7 +20,7 @@ return new class extends Migration
 
             $table->boolean('is_active')
                 ->default(true)
-                ->afrer('role_id');
+                ->after('role_id');
         });
     }
 

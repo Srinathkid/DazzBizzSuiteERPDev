@@ -3,9 +3,10 @@
 namespace App\Http\Controllers\API\V1;
 
 use App\Http\Resources\UserResource;
+use App\Services\UserService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
-use App\Services\UserService;
+
 class UserController extends BaseApiController
 {
     public function __construct(

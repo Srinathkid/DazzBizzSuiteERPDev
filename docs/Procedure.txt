@@ -233,11 +233,11 @@ M1.2 Step 9.2 Build Secure login API
 57.1)php artisan tinker 
 57.2)execute the command
  User::create([                                                                               
-. 'username'=>'admin',                                                                         
-. 'name'=>'Administrator',                                                                     
-. 'email'=>'admin@dazzexports.com',                                                            
-. 'password'=>Hash::make('admin@123'),                                                         
-. ]);   
+'username'=>'admin',                                                                         
+ 'name'=>'Administrator',                                                                     
+'email'=>'admin@dazzexports.com',                                                            
+'password'=>Hash::make('admin@123'),                                                         
+]);   
 58)start the server
 
 20-Aug-2026
@@ -248,7 +248,8 @@ Accept:application/json
 //Content-Type:application/json
 Origin:http://localhost:5173
 59.3)Copy values for XSRF-TOKEN from cookies from the response
-59.4)Open powershell and decode the token value using the command [System.Net.WebUtility]::UrlDecode(" ")
+59.4)Open powershell and decode the token value using the command [System.Net.WebUtility]::UrlDecode("XSRF TOEKN") 
+//[System.Net.WebUtility]::UrlDecode("
 59.5)Paste the decoded token in login api request header under lable "X-XSRF-TOKEN"
 59.6)Test the login api
 
@@ -498,4 +499,1938 @@ M1.2 Step 10.7 Testing
 
 M1.2 Step 10.8 Cerntralize API Response Format
 77)Create APIResponse Helper
+77.1)app/Support/ApiResponse.php
+
+M1.2 Step 10.9 Final Backend Architecture Verification
+78)Clear All caches
+78.1)php artisan optimize:clear
+78.2)php artisan config:show sanctum
+78.3)php artisan migrate:status
+78.4)php artisan route:list --path=api/v1
+78.5)php artisan serve
+78.6)Test All the API's
+78.7) Git Commit
+
+M1.2 Backend authentication and authorization completed
+
+
+M1.3 API Foundation and ERP Domain Structure
+
+M1.3 Step 1
+79)
+//Goal
+
+React
+   │
+   ▼
+Laravel API v1
+   │
+   ├── Controllers
+   ├── Form Requests
+   ├── Services
+   ├── Repositories
+   ├── Models
+   ├── API Resources
+   └── Standard Responses
+          │
+          ▼
+       MariaDB
+
+80)
+
+//Roadmap
+
+| Step   | Task                                                     |
+| ------ | -------------------------------------------------------- |
+| **1**  | Define ERP module/domain structure                       |
+| **2**  | Establish API Controller structure                       |
+| **3**  | Establish Service layer structure                        |
+| **4**  | Establish Repository/Contract structure                  |
+| **5**  | Establish API Resource structure                         |
+| **6**  | Establish Form Request validation pattern                |
+| **7**  | Build first complete module example                      |
+| **8**  | Verify API → Controller → Service → Repository → DB flow |
+| **9**  | Error/validation response verification                   |
+| **10** | Final architecture verification & Git commit             |
+
+
+81)What each layer does
+
+81.1)Controller
+
+Receives HTTP requests and returns API responses.
+Request → Controller
+
+81.2)Form Request
+
+Validates incoming data.
+Request → Validation
+
+81.3)Service
+
+Contains business logic.
+Controller → Service
+
+81.4)Repository
+
+Handles database/data-access logic.
+Service → Repository
+
+81.5)Model
+
+Represents the database entity.
+Repository → Model → Database
+
+81.6)Resource
+
+Controls how database models are converted into API JSON.
+Model → Resource → JSON
+
+Controller  = HTTP layer
+Request     = validation
+Service     = business logic
+Repository  = data access
+Model       = database entity
+Resource    = API output transformation
+
+M1.3 Step 2
+
+82)Chanage AuthController extends from Controller to BaseApiController
+App\Http\Controllers\API\V1\AuthController
+
+83)Verify 
+83.1)php artisan optimize:clear
+83.2)Test login/me/logout api's
+
+M1.3 Step 3 Service Layer Structure
+
+84)verify app/Services/AuthService.php
+84.1)
+php artisan optimize:clear
+//Test
+GET /api/v1/health
+POST /api/v1/login
+GET /api/v1/me
+
+M1.3 Step 4 Repository & Contract Structure
+
+85)Create directories if not exist
+app/
+└── Repositories/
+    ├── Contracts/
+    └── Eloquent/
+
+86)create app/Repositories/Contracts/UserRepositoryInterface.php
+87) create app/Repositories/Eloquent/EloquentUserRepository.php
+88)Open RepositoryServiceProvider.php and add in register()
+UserRepositoryInterface::class
+89)Register the provider
+89.1)Open bootstrap/providers.php
+89.2)Add RepositoryServiceProvider::class,
+
+90)Test the binding
+composer dump-autoload
+php artisan optimize:clear
+php artisan tinker
+>$repo = app(\App\Repositories\Contracts\UserRepositoryInterface::class);
+>get_class($repo);
+>$user = $repo->findByUsername('admin');
+>$user->username;
+
+M1.3 Step 5 Connect Repository -> Service
+
+91)connection
+AuthController
+      ↓
+AuthService
+      ↓
+UserRepositoryInterface
+      ↓
+EloquentUserRepository
+      ↓
+User Model
+      ↓
+users table
+
+91.1)Update Authservice.php
+public function __construct(
+        private readonly UserRepositoryInterface $userRepository
+    ) {}
+
+91.2)Add Repository based method
+public function findUserByUsername(string $username): ?User
+{
+    return $this->userRepository->findByUsername($username);
+}
+
+91.3)php artisan tinker
+>$service = app(\App\Services\AuthService::class);
+>$user->username;
+>get_class($service);
+>get_class(app(\App\Repositories\Contracts\UserRepositoryInterface::class));
+>exit
+ 91.4)Test login/me/logout api
+
+ M1.3 Step 6 API Resource & Response Structure
+
+ 92)Create UserResource
+ 92.1)php artisan make:resource UserResource
+
+93)Update /me in app/Http/Controllers/API/V1/AuthController.php
+93.1)Add use App\Http\Resources\UserResource; and use App\Support\ApiResponse;
+93.2)Change me() to return  return ApiResponse::success('Authenticated User',['user'=>new UserResource($request->user())]);
+93.3)Test /me API
+
+94)change AuthCOntroller.php login() return to  
+return ApiResponse::success(
+            'Login Successful',
+            [
+                'user' => new UserResource($user),
+            ]
+        );
+
+94.1)test login api
+
+
+M1.3 Step 8 Build First completed module
+
+//Target Architecture
+GET /api/v1/users/1
+          │
+          ▼
+     UserController
+          │
+          ▼
+       UserService
+          │
+          ▼
+ UserRepositoryInterface
+          │
+          ▼
+EloquentUserRepository
+          │
+          ▼
+       User Model
+          │
+          ▼
+        MySQL
+
+//Backend
+
+MySQL
+  ↓
+User Model
+  ↓
+UserResource
+  ↓
+ApiResponse
+  ↓
+JSON
+
+95)Create user controller UserController.php
+95.1)php artisan make:controller API/V1/UserController
+
+96)create UserService.php
+97)Add the route ap.php in v1 group
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/users/{id}', [
+        UserController::class,
+        'show',
+    ]);
+});
+
+98)Test api /users/1 for success /users/123 for false response
+
+99)Verified in this stage => Controller → Service → Repository → Model → Resource → Response
+
+
+
+M1.3 Step 9 Error & Validation response verification
+
+100) Verify all api's with proper and wrong data
+
+M1.3) Step 10 Final Architecture Verification & Commit
+
+101)Verify dependency injection "php artisan tinker"
+>$service = app(\App\Services\UserService::class);
+>$repo = app(\App\Repositories\Contracts\UserRepositoryInterface::class);
+>get_class($repo);
+>$user = $service->findById(1);
+>$user->username;
+>exit
+
+06-Sep-2026
+
+M1.4 Employee Management (First business module in our ERP)
+
+M1.4 roadmap
+
+Design Employee database structure
+Create migration
+Create Employee model
+Create repository interface
+Create Eloquent repository
+Create service
+Create Form Requests
+Create controller
+Create API Resource
+Add routes
+Add permissions
+Test CRUD APIs
+Add filtering/search/pagination
+Standardize errors
+Final architecture review
+Git commit
+
+M1.4 Step 1 : DB details
+Just explanation about our flow
+
+M1.4 Step 2 : Employee Backend
+
+102)Create the migration
+php artisan make:model Employee -m
+
+102.1)database/migrations/xxxx_xx_xx_xxxxxx_create_employees_table.php
+add field details and migrate
+
+102.2)php artisan migrate
+
+103)updaye /Models/Employee.php
+103.1)Fillable => only allow the fields listed in $fillable to be mass-assigned
+avoid fields such as id,created_at,updated_at
+103.2)casts => 
+protected $casts = [
+    'date_of_birth' => 'date',
+    'date_of_joining' => 'date',
+];
+treat these database values as date objects rather than ordinary strings.
+
+104)php artisan tinker
+>$employee = new App\Models\Employee;
+>$employee->getTable();
+>$employee->getFillable();
+>$employee->getCasts();
+>exit
+
+07-Sep-2026
+
+M1.4 Step 2.3 Employee repository
+Connect Employee model to Employee Reporsitory
+105)Create app/Repositories/Contracts/EmployeeRepositoryInterface.php
+105.1)Update interface Code
+
+106)Create Eloquent Repository app/Repositories/Eloquent/EloquentEmployeeRepository.php
+106.1)update the Code
+
+107)Register the binding
+107.1)Open app/Providers/AppServiceProvider.php
+107.2)in register()
+$this->app->bind(
+        EmployeeRepositoryInterface::class,
+        EloquentEmployeeRepository::class
+    );
+
+108)Tets the binding
+108.1)php artisan tinker
+>$repo = app(\App\Repositories\Contracts\EmployeeRepositoryInterface::class);
+>get_class($repo);
+>$repo->getAll();
+>exit
+
+M1.4 Step 2.4 Employee Service
+
+109)create app/Services/EmployeeService.php
+109.1)Update Code
+
+110)Test service
+110.1)php artisan tinker
+>$service = app(\App\Services\EmployeeService::class);
+>get_class($service);
+>$repo = app(\App\Repositories\Contracts\EmployeeRepositoryInterface::class);
+>get_class($repo);
+>$service->getAll();
+>exit
+
+M1.4 Step 2.5 Employee form request and validation
+Will define what data the employee api should aacept
+app/Http/Requests/
+├── StoreEmployeeRequest.php
+└── UpdateEmployeeRequest.php
+111)create php artisan make:request StoreEmployeeRequest
+111.1)Update the Code
+112)php artisan make:request UpdateEmployeeRequest
+112.1)Update the Code
+
+113)Test validation
+php artisan tinker
+>app(\App\Http\Requests\StoreEmployeeRequest::class);
+>app(\App\Http\Requests\UpdateEmployeeRequest::class);
+>exit
+
+M1.4 Step 2.6 Employee Controller + API Routes
+
+114) create EmployeeController
+114.1)create php artisan make:controller API/V1/EmployeeController
+114.2)Update the Code
+
+115)Add routes for employees in api.php
+inside v1 group
+Route::middleware('auth:sanctum')->group(function () {
+
+        Route::apiResource(
+            'employees',
+            EmployeeController::class
+        );
+
+    });
+
+Why apiResource()?
+
+Laravel automatically creates:
+
+GET     /api/v1/employees
+POST    /api/v1/employees
+GET     /api/v1/employees/{employee}
+PUT     /api/v1/employees/{employee}
+PATCH   /api/v1/employees/{employee}
+DELETE  /api/v1/employees/{employee}
+
+So we don't need to manually write six routes
+
+M1.4 Step 2.7 Employee API Resource
+
+116) Create EmployeeResource
+php artisan make:resource EmployeeResource
+
+app/Http/Resources/EmployeeResource.php
+
+Add the code 
+
+117)Check api response 
+ApiResponse::success(
+    'Employee retrieved successfully.',
+    [
+        'employee' => new EmployeeResource($employee),
+    ]
+);
+
+118)Test the resopurce php artisan tinker
+>$employee = new App\Models\Employee([
+    'employee_code' => 'TEST001',
+    'first_name' => 'Test',
+    'last_name' => 'Employee',
+    'date_of_joining' => '2026-09-07',
+]);
+
+>$resource = new App\Http\Resources\EmployeeResource($employee);
+>$resource->toArray(request());
+>exit
+
+
+//DB Recovery patchup
+1)Restore db
+2)run the migrations
+3)Create admin user in tinker
+User::create(['username'=>'admin','name'=>'Administrator','email'=>'admin@dazzexports.com','password'=>Hash::make('admin@123'),]);   
+4)update the default table values using php artisan db:seed
+5)update the admin user role
+php artisan tinker
+>App\Models\Role::all();
+>App\Models\User::find(1);
+>$user = App\Models\User::find(1);
+>$user->role_id = 1;
+>$user->save();
+>$user->refresh();
+>$user->role_id;
+>$user->role;
+>$user->hasPermission('sales.create');
+
+M1.4 Step 2.8 Employee API Resource
+
+Now we need to verify the complete backend flow:
+
+Request → Validation → Controller → Service → Repository → Model → Database → Resource → JSON
+
+119)php artisan serve
+
+In postman POST http://127.0.0.1:8000/api/v1/login
+
+Headers
+-------
+Accept: application/json
+Origin: http://localhost:5173
+Content-Type: application/json
+X-XSRF-TOKEN:[Your token]
+
+Body
+---------
+{
+    "employee_code": "EMP001",
+    "first_name": "Srinath",
+    "last_name": "Selvaraj",
+    "email": "srinath_s@dazzexports.com",
+    "phone": "8667516761",
+    "date_of_birth": "1992-11-04",
+    "gender": "male",
+    "date_of_joining": "2023-12-01",
+    "department_id": null,
+    "designation_id": null,
+    "manager_id": null,
+    "employment_type": "full_time",
+    "status": "active",
+    "address": "Test Address",
+    "city": "Salem",
+    "state": "Tamil Nadu",
+    "pincode": "636001",
+    "emergency_contact_name": "Test Contact",
+    "emergency_contact_phone": "9566657455"
+}
+
+
+M1.4 Step 2.9 Test the Employee CRUD API's
+
+120)GET http://127.0.0.1:8000/api/v1/employees
+Header
+-------
+Accept: application/json
+Origin: http://localhost:5173
+Content-Type: application/json
+
+121)GET http://127.0.0.1:8000/api/v1/employees/1 //get individual employee
+
+Header
+-------
+Accept: application/json
+Origin: http://localhost:5173
+Content-Type: application/json
+
+23-Sep-2026
+
+122)Update employees 
+PUT http://127.0.0.1:8000/api/v1/employees/1
+Headers
+-----------
+A
+ccept: application/json
+Origin: http://localhost:5173
+Content-Type: application/json
+X-XSRF-TOKEN:eyJpdiI6InBpNEYzTkNIV3hsZUxQbS80N2Zvcnc9PSIsInZhbHVlIjoiQVlxeGRNUC90N01BTzdHWmJaTUE3ZWNTdHgyV01Fd3dycUFVOG5IRFU2bndybUVjWkc2a3ZpOGw1eTdrcS9PM1ROdnlXM1ZHb3NUS1NHZk1OY1BsbG90M0hpWE9IUXU5M3lweU50TnpMS01RaWlJQnNrWmNxSWllVGk3VWJhS0IiLCJtYWMiOiJjNWExZmY0NTZmZGUwMWE5NGZkMmNhNzdlNmFmN2FmOGM0MzM5MGFjNWM3ZmEyMjM3NGU0NThlZDkzODU5YTk2IiwidGFnIjoiIn0=
+
+Body
+-------
+{
+    "phone": "8667516761",
+    "city": "Salem",
+    "status": "active"
+}
+
+123)Delete employee
+DELETE http://127.0.0.1:8000/api/v1/employees/2
+Accept: application/json
+Origin: http://localhost:5173
+Content-Type: application/json
+X-XSRF-TOKEN:
+
+M1.4 Step 3 Employee API Finalization
+M1.4 Step 3.1 to 3.3  Add API pagination Controls
+
+25-Sep-2026
+
+M1.4 Ste 3.4 Employee API Authorization
+Will connect the Employee Module to the permsission system in M1.2
+
+124)Update api.php
+
+Replace this
+Route::middleware('auth:sanctum')->group(function () {
+    Route::apiResource('employees', EmployeeController::class);
+});
+
+with
+
+Route::middleware('auth:sanctum')->group(function () {
+
+    Route::get('/employees', [EmployeeController::class, 'index'])
+        ->middleware('permission:employees.view');
+
+    Route::post('/employees', [EmployeeController::class, 'store'])
+        ->middleware('permission:employees.create');
+
+    Route::get('/employees/{employee}', [EmployeeController::class, 'show'])
+        ->middleware('permission:employees.view');
+
+    Route::put('/employees/{employee}', [EmployeeController::class, 'update'])
+        ->middleware('permission:employees.update');
+
+    Route::delete('/employees/{employee}', [EmployeeController::class, 'destroy'])
+        ->middleware('permission:employees.delete');
+});
+
+//Add employee permission to the list
+125)php artisan tinker
+>$permissions = [
+    ['name' => 'View Employees', 'slug' => 'employees.view', 'module' => 'Employees', 'description' => 'View Employees', 'is_active' => true],
+    ['name' => 'Create Employees', 'slug' => 'employees.create', 'module' => 'Employees', 'description' => 'Create Employees', 'is_active' => true],
+    ['name' => 'Update Employees', 'slug' => 'employees.update', 'module' => 'Employees', 'description' => 'Update Employees', 'is_active' => true],
+    ['name' => 'Delete Employees', 'slug' => 'employees.delete', 'module' => 'Employees', 'description' => 'Deactivate Employees', 'is_active' => true],
+];
+
+>foreach ($permissions as $permission) {
+    App\Models\Permission::create($permission);
+}
+
+>App\Models\Permission::where('module', 'Employees')->get();
+
+//Allocate new permission to the admin user
+
+>$admin = App\Models\Role::find(1);
+
+>$employeePermissions = App\Models\Permission::whereIn('slug', [
+    'employees.view',
+    'employees.create',
+    'employees.update',
+    'employees.delete',
+])->pluck('id');
+
+>$admin->permissions()->syncWithoutDetaching($employeePermissions);
+
+//verify the permission
+>App\Models\Role::find(1)->permissions()
+    ->where('module', 'Employees')
+    ->get(['permissions.id', 'permissions.name', 'permissions.slug']);
+
+//verify admin user using role id
+>App\Models\User::where('username', 'admin')
+    ->first(['id', 'username', 'role_id']);
+
+126)Test all the employee api's in postman
+
+26-Sep-2026
+
+M1.4 Step 4.1 Create React frontend
+
+127)Open powershell cd D:\Programms\Dazz\Web\DazzBizzSuiteERPDev\frontend
+
+128)Create react application
+npm create vite@latest . -- --template react
+128.1)Select ESLint when prompt
+128.2)npm install
+128.3)npm run dev
+
+M1.4 Step 4.2 Install frontend dependencies
+129)React router
+npm install react-router-dom
+130)Axios (Communicate with API)
+npm install axios
+131)bootstrap
+npm install bootstrap
+132)npm run dev
+
+M1.4 Step 4.3 Setup React Router + Basic ERP Layout
+133)Open src/main.jsx
+//change the code
+
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import { BrowserRouter } from 'react-router-dom';
+import 'bootstrap/dist/css/bootstrap.min.css';
+import './index.css';
+import App from './App';
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+    <React.StrictMode>
+        <BrowserRouter>
+            <App />
+        </BrowserRouter>
+    </React.StrictMode>
+);
+
+134)Open src/App.jsx
+//replace the code
+
+
+import {Link, Route, Routes} from 'react-router-dom';
+
+function Dashboard(){
+  return(
+    <div className="container-fluid">
+      <h2>Dashboard</h2>
+      <p>Welcome to DazzBizzSuite ERP!</p>
+    </div>
+  );
+}
+
+function Employees(){
+  return(
+    <div className="container-fluid">
+      <h2>Employees</h2>
+      <p>Employee Module coming next.</p>
+    </div>
+  );
+}
+
+function App(){
+  return (
+    <div className="d-flex vh-100">
+      {/*Sidebar*/}
+      <aside className="bg-dark text-white p-3" style={{width:'240px'}}>
+        <h4>DazzBizzSuite ERP</h4>
+
+        <nav className="nav flex-column gap-2">
+          <Link to="/" className="nav-link text-white">Dashboard</Link>
+          <Link to="/employees" className="nav-link text-white">Employees</Link>
+
+        </nav>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-grow-1 bg-light">
+        {/* Header */}
+        <header className="bg-white border-bottom p-3">
+          <h5 className="mb-0">ERP Management System</h5>  
+        </header>
+
+        {/* Page Content */}
+        <div className="p-4">
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/employees" element={<Employees />} />
+          </Routes>
+        </div>
+      </main>
+    </div>
+  );
+
+}
+export default App;
+
+
+135)Replace the index.css file 
+
+html,
+body,
+#root {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    min-height: 100%;
+}
+
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    background-color: #f8f9fa;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+136)Remove import './App.css'; from App.jsx
+
+
+
+
+
+
+M1.4 Step 4.4 React Employee Module Structure
+137)Create the file structure in frontend folder
+src/
+├── pages/
+│   └── employees/
+│       ├── EmployeeList.jsx
+│       ├── EmployeeForm.jsx
+│       └── EmployeeView.jsx
+│
+├── services/
+│   └── employeeService.js
+│
+└── components/
+    └── employees/
+        ├── EmployeeTable.jsx
+        └── EmployeeFormFields.jsx
+
+
+M1.4 Step 4.2 Employee List UI
+
+138)Open EmployeeList.jsx
+Add the code
+
+139)Open src/components/employees/EmployeeTable.jsx
+Add the code
+
+140)In App.jsx add the route
+import EmployeeList from './pages/employees/EmployeeList';
+<Route path="/employees" element={<EmployeeList />} />
+
+28-Sep-2026
+M1.4 Step 4.5 Employee Create/Edit Form UI
+
+141)Create Employee Form
+src/pages/employees/EmployeeForm.jsx
+
+//add the code
+
+142)Add the route 
+import EmployeeForm from './pages/employees/EmployeeForm';
+<Route path="/employees/create" element={<EmployeeForm />} />
+
+143)Make the "Add Employee: workable
+//EmployeeList.jsx
+import { Link } from 'react-router-dom';
+Convert from button to Link
+
+<Link
+    to="/employees/create"
+    className="btn btn-primary"
+>
+    + Add Employee
+</Link>
+
+M1.4 Step 4.6 — Employee View UI
+
+144)Create EmployeeView.jsx
+//src/pages/employees/EmployeeView.jsx
+add code
+
+145)Add the route
+import EmployeeView from './pages/employees/EmployeeView';
+<Route path="/employees/:id" element={<EmployeeView />} />
+
+//Note
+first=>/employees/create
+later=>/employees/:id
+
+need to follow this order
+
+146)make the view button workable
+//src/components/employees/EmployeeTable.jsx
+Change the view button into link
+<Link
+    to={`/employees/${employee.id}`}
+    className="btn btn-sm btn-primary"
+>
+    View
+</Link>
+
+M1.4 Step 4.7 — API Service Layer with Axios
+Connect react frontend to laravel bakend without putting axios calls directly inside our pages
+
+147)Create 
+src/services/employeeService.js
+//add the code
+
+import api from './api';
+
+const employeeService = {
+
+    getAll: async (params = {}) => {
+        const response = await api.get('/api/v1/employees', {
+            params,
+        });
+
+        return response.data;
+    },
+
+    getById: async (id) => {
+        const response = await api.get(`/api/v1/employees/${id}`);
+
+        return response.data;
+    },
+
+    create: async (employeeData) => {
+        const response = await api.post(
+            '/api/v1/employees',
+            employeeData
+        );
+
+        return response.data;
+    },
+
+    update: async (id, employeeData) => {
+        const response = await api.put(
+            `/api/v1/employees/${id}`,
+            employeeData
+        );
+
+        return response.data;
+    },
+
+    delete: async (id) => {
+        const response = await api.delete(
+            `/api/v1/employees/${id}`
+        );
+
+        return response.data;
+    },
+};
+
+export default employeeService;
+
+148)Create Axios instance
+src/services/api.js
+//add code
+import axios from 'axios';
+
+const api = axios.create({
+    baseURL: 'http://localhost:8000',
+    withCredentials: true,
+    headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+    },
+});
+
+export const getCsrfCookie = async () => {
+    await api.get('/sanctum/csrf-cookie');
+};
+
+export default api;
+
+M1.4 Step 4.8 — Connect React → Laravel API
+
+Connecting to real laravel backend data
+
+149)add withXSRFToken: true, in src/services/api.js
+150)src/services/authService.js
+//add the code
+import api from './api';
+
+const authService = {
+
+    login: async (username, password) => {
+
+        // First get CSRF cookie
+        await api.get('/sanctum/csrf-cookie');
+
+        // Then login
+        const response = await api.post('/api/v1/login', {
+            username,
+            password,
+        });
+
+        return response.data;
+    },
+
+    me: async () => {
+        const response = await api.get('/api/v1/me');
+
+        return response.data;
+    },
+
+    logout: async () => {
+        const response = await api.post('/api/v1/logout');
+
+        return response.data;
+    },
+};
+
+export default authService;
+
+151)Create login page
+src/pages/Login.jsx
+//add code
+
+152)Add login route
+//app.jsx
+import Login from './pages/Login';
+//very first route
+<Route path="/login" element={<Login />} />
+
+153)Start server and UI
+php artisan serve for backend
+npm run dev for frontend
+
+154)Connect employeelist to travel
+
+155)Move side bar (ERP layout) outside login page
+//Open App.jsx
+add code
+
+29-Sep-2026
+156)Add show/hide password
+//open login.jsx
+add code
+
+M1.4 Step 4.9 Authentication Integration - Create an Authentication Context
+
+157)Create auth Context
+src/
+└── context/
+    └── AuthContext.jsx
+
+add code
+import { createContext, useContext, useEffect, useState } from 'react';
+import authService from '../services/authService';
+
+const AuthContext = createContext(null);
+
+export function AuthProvider({ children }) {
+    const [user, setUser] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    const loadUser = async () => {
+        try {
+            const response = await authService.me();
+
+            setUser(response.data.user);
+        } catch (error) {
+            setUser(null);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        loadUser();
+    }, []);
+
+    const login = async (username, password) => {
+        const response = await authService.login(username, password);
+
+        setUser(response.data.user);
+
+        return response;
+    };
+
+    const logout = async () => {
+        await authService.logout();
+
+        setUser(null);
+    };
+
+    return (
+        <AuthContext.Provider
+            value={{
+                user,
+                loading,
+                login,
+                logout,
+            }}
+        >
+            {children}
+        </AuthContext.Provider>
+    );
+}
+
+export function useAuth() {
+    return useContext(AuthContext);
+}
+
+158)modify main.jsx
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import { BrowserRouter } from 'react-router-dom';
+import 'bootstrap/dist/css/bootstrap.min.css';
+import './index.css';
+import App from './App';
+import { AuthProvider } from './context/AuthContext';
+
+createRoot(document.getElementById('root')).render(
+    <StrictMode>
+        <BrowserRouter>
+            <AuthProvider>
+                <App />
+            </AuthProvider>
+        </BrowserRouter>
+    </StrictMode>
+);
+
+
+M1.4 Step 4.10 — Protected Routes + Login Integration
+
+159)Update Login.jsx
+remove
+import authService from '../services/authService';
+
+add
+import { useAuth } from '../context/AuthContext';
+
+//inside Login()
+const { login } = useAuth();
+
+//inside try
+await login(username, password);
+navigate('/employees');
+
+160)Protected route
+
+src/components/ProtectedRoute.jsx
+
+import { Navigate, Outlet } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+
+function ProtectedRoute() {
+    const { user, loading } = useAuth();
+
+    if (loading) {
+        return (
+            <div className="min-vh-100 d-flex justify-content-center align-items-center">
+                <div>Loading...</div>
+            </div>
+        );
+    }
+
+    if (!user) {
+        return <Navigate to="/login" replace />;
+    }
+
+    return <Outlet />;
+}
+
+export default ProtectedRoute;
+
+161)Update App.jsx
+import ProtectedRoute from './components/ProtectedRoute';
+
+//App()
+
+function App() {
+    return (
+        <Routes>
+            <Route path="/login" element={<Login />} />
+
+            <Route element={<ProtectedRoute />}>
+                <Route element={<ERPLayout />}>
+                    <Route path="/" element={<Dashboard />} />
+                    <Route path="/employees" element={<EmployeeList />} />
+                    <Route path="/employees/create" element={<EmployeeForm />} />
+                    <Route path="/employees/:id" element={<EmployeeView />} />
+                </Route>
+            </Route>
+        </Routes>
+    );
+}
+
+M1.4 Step 4.11 Logout + Logged-in User in Header
+162)Updae 
+src/layouts/ERPLayout.jsx 
+
+const { user, logout } = useAuth();
+
+{user?.name || user?.username || 'User'}
+
+await logout();
+navigate('/login', { replace: true });
+
+
+01-Oct-2026
+M1.4 Step 4.12 Employee CRUD Integration Completion
+
+//Create Employee
+163)Open src/pages/employees/EmployeeForm.jsx
+163.1)import employeeService from '../../services/employeeService';
+163.2)
+const [loading, setLoading] = useState(false);
+const [error, setError] = useState('');
+163.3) modify the handleSubmit
+163.4)import { useNavigate } from 'react-router-dom';
+163.5)const navigate = useNavigate();
+163.6)Add this before form
+{error && (
+    <div className="alert alert-danger">
+        {error}
+    </div>
+)}
+163.7)Change the subbit button
+<button
+    type="submit"
+    className="btn btn-primary"
+    disabled={loading}
+>
+    {loading ? 'Saving...' : 'Save Employee'}
+</button>
+163.8)Test
+
+M1.4 Step 4.13 Employee Update Integration
+
+164)Will use same form to create and Edit (EmployeeForm.jsx)
+
+164.1)ad the imports
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import employeeService from '../../services/employeeService';
+
+164.2)
+const { id } = useParams();
+const navigate = useNavigate();
+
+const isEditMode = Boolean(id);
+
+164.3)
+const [loading, setLoading] = useState(false);
+const [loadingEmployee, setLoadingEmployee] = useState(false);
+const [error, setError] = useState('');
+
+164.4)add useEffect method
+164.5)change the submit logic
+const handleSubmit = async (event) => {
+    event.preventDefault();
+
+    setError('');
+    setLoading(true);
+
+    try {
+        if (isEditMode) {
+            await employeeService.update(id, formData);
+        } else {
+            await employeeService.create(formData);
+        }
+
+        navigate('/employees');
+    } catch (error) {
+        console.error(error);
+
+        setError(
+            error.response?.data?.message ||
+            'Failed to save employee.'
+        );
+    } finally {
+        setLoading(false);
+    }
+};
+
+164.6)change the heading
+<h2 className="mb-1">{isEditMode ? 'Edit Employee' : 'Add Employee'}</h2>
+<p className="text-muted mb-0">{isEditMode ? 'Update employee information' : 'Create a new employee'}</p>
+
+164.7)Change the button
+<button
+    type="submit"
+    className="btn btn-primary"
+    disabled={loading}
+>
+    {loading
+        ? 'Saving...'
+        : isEditMode
+            ? 'Update Employee'
+            : 'Save Employee'}
+</button>
+
+164.8)Add the edit route
+<Route
+    path="/employees/:id/edit"
+    element={<EmployeeForm />}
+/>
+
+02-Oct-2026
+M1.4 Step 4.14 Employee Deletion Integration
+
+165)Employee Deletion Integration
+165.1)Update EmployeeList.jsx
+//Add
+const [deletingId, setDeletingId] = useState(null);
+
+const handleDelete = async (id) => {
+    const confirmed = window.confirm(
+        'Are you sure you want to delete this employee?'
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+    try {
+        setDeletingId(id);
+        setError('');
+
+        await employeeService.delete(id);
+
+        setEmployees((currentEmployees) =>
+            currentEmployees.filter(
+                (employee) => employee.id !== id
+            )
+        );
+    } catch (error) {
+        console.error(error);
+
+        setError(
+            error.response?.data?.message ||
+            'Failed to delete employee.'
+        );
+    } finally {
+        setDeletingId(null);
+    }
+};
+
+<EmployeeTable
+    employees={employees}
+    onDelete={handleDelete}
+    deletingId={deletingId}
+/>
+
+165.2)Update EmployeeTable.jsx
+
+import { Link } from 'react-router-dom';
+
+function EmployeeTable({
+    employees,
+    onDelete,
+    deletingId,
+}) {
+
+<td>
+    <Link
+        to={`/employees/${employee.id}`}
+        className="btn btn-sm btn-primary me-2"
+    >
+        View
+    </Link>
+
+    <Link
+        to={`/employees/${employee.id}/edit`}
+        className="btn btn-sm btn-warning me-2"
+    >
+        Edit
+    </Link>
+
+    <button
+        type="button"
+        className="btn btn-sm btn-danger"
+        onClick={() => onDelete(employee.id)}
+        disabled={deletingId === employee.id}
+    >
+        {deletingId === employee.id
+            ? 'Deleting...'
+            : 'Delete'}
+    </button>
+</td>
+
+M1.4 Step 4.15 Employee Validation Error Handling
+166)Validation
+166.1)Add validation state
+src/pages/employees/EmployeeForm.jsx
+//add
+const [validationErrors, setValidationErrors] = useState({});
+//add in handleSubmit
+setValidationErrors({});
+//update the error in catch 
+catch (error) {
+    console.error(error);
+
+    if (error.response?.status === 422) {
+        setValidationErrors(
+            error.response.data.errors || {}
+        );
+
+        setError(
+            error.response.data.message ||
+            'Please correct the validation errors.'
+        );
+    } else {
+        setError(
+            error.response?.data?.message ||
+            'Failed to save employee.'
+        );
+    }
+
+166.2)Display error field
+<div className="mb-3">
+    <label className="form-label">
+        Employee Code
+    </label>
+
+    <input
+        type="text"
+        name="employee_code"
+        className={`form-control ${
+            validationErrors.employee_code
+                ? 'is-invalid'
+                : ''
+        }`}
+        value={formData.employee_code}
+        onChange={handleChange}
+    />
+
+    {validationErrors.employee_code && (
+        <div className="invalid-feedback">
+            {validationErrors.employee_code[0]}
+        </div>
+    )}
+</div>
+
+M1.4 Step 4.16 Reusable Form Validation Display
+
+167)Create src/components/common/FieldError.jsx
+167.1)Add
+function FieldError({ errors, field }) {
+    if (!errors?.[field]) {
+        return null;
+    }
+
+    return (
+        <div className="invalid-feedback">
+            {errors[field][0]}
+        </div>
+    );
+}
+
+export default FieldError;
+
+167.2)Open EmployeeForm.jsx
+import FieldError from '../../components/common/FieldError';
+
+<div className="mb-3">
+    <label className="form-label">
+        Employee Code
+    </label>
+
+    <input
+        type="text"
+        name="employee_code"
+        className={`form-control ${
+            validationErrors.employee_code
+                ? 'is-invalid'
+                : ''
+        }`}
+        value={formData.employee_code}
+        onChange={handleChange}
+    />
+//newly added
+    <FieldError
+        errors={validationErrors}
+        field="employee_code"
+    />
+</div>
+
+//change to each field like this 
+
+06-Oct-2026
+
+M1.4 Step 4.17 Employee List Pagination
+
+168)Add Pagination state
+open src/pages/employees/EmployeeList.jsx
+168.1)Add
+const [pagination, setPagination] = useState({
+    current_page: 1,
+    per_page: 20,
+    total: 0,
+    last_page: 1,
+});
+
+168.2)update loadEmployees()
+
+ const response = await employeeService.getAll({
+            page,
+            per_page: 20,
+        });
+ setPagination(response.data.pagination);
+
+ 168.3)Add Pagination buttons
+ //below EmployeeTable add
+ {pagination.last_page > 1 && (
+    <div className="d-flex justify-content-between align-items-center mt-3">
+
+        <div className="text-muted">
+            Page {pagination.current_page} of {pagination.last_page}
+        </div>
+
+        <div className="btn-group">
+
+            <button
+                type="button"
+                className="btn btn-outline-primary"
+                disabled={pagination.current_page === 1}
+                onClick={() =>
+                    loadEmployees(
+                        pagination.current_page - 1
+                    )
+                }
+            >
+                Previous
+            </button>
+
+            <button
+                type="button"
+                className="btn btn-outline-primary"
+                disabled={
+                    pagination.current_page ===
+                    pagination.last_page
+                }
+                onClick={() =>
+                    loadEmployees(
+                        pagination.current_page + 1
+                    )
+                }
+            >
+                Next
+            </button>
+
+        </div>
+
+    </div>
+)}
+
+07-Oct-2026
+
+M1.4.18 Employee search
+
+169)Step 1 Backend search
+169.1)Update employee repository interface
+//open backend/app/Repositories/Contracts/EmployeeRepositoryInterface.php
+Modify from 
+public function paginate(int $perPage = 20);
+
+to 
+
+public function paginate(
+    int $perPage = 20,
+    ?string $search = null
+);
+
+169.2)Update employee respository
+//open backend/app/Repositories/Eloquent/EmployeeRepository.php
+
+modify from 
+
+public function paginate(int $perPage = 20): LengthAwarePaginator
+    {
+        
+        return $this->model
+            ->orderBy('id')
+            ->paginate($perPage);
+    }
+
+to
+
+public function paginate(int $perPage = 20, ?string $search = null): LengthAwarePaginator
+    {
+        $query = Employee::query();
+        if($search!==null && $search !== ''){
+            $query->where(function($q) use ($search){
+                $q->where('employee_code', 'like', "%{$search}%")
+                ->orWhere('first_name', 'like', "%{$search}%")
+                ->orWhere('last_name', 'like', "%{$search}%")
+                ->orWhere('email', 'like', "%{$search}%")
+                ->orWhere('phone', 'like', "%{$search}%");
+            });
+        }
+        return $query
+            ->orderBy('id')
+            ->paginate($perPage);
+    }
+
+
+
+169.3)Update Employee Service
+
+//open backend/app/Services/EmployeeService.php
+
+modify form
+public function paginate(int $perPage = 20)
+{
+    return $this->employeeRepository->paginate($perPage);
+}
+
+to
+
+public function paginate(
+    int $perPage = 20,
+    ?string $search = null
+) {
+    return $this->employeeRepository->paginate(
+        $perPage,
+        $search
+    );
+}
+
+169.4)Update controller
+
+//open backend/app/Http/Controllers/API/V1/EmployeeController.php
+
+update the code in index from
+
+$employees = $this->employeeService->paginate($perPage);
+
+to 
+
+$search = trim((string) $request->input('search', ''));
+
+$employees = $this->employeeService->paginate(
+    $perPage,
+    $search !== '' ? $search : null
+);
+
+
+M1.4.18 Step 2 = React search integration
+
+170)Add search state in EmployeeList.jsx
+//Open frontend/src/pages/employees/EmployeeList.jsx
+
+//add
+const [search, setSearch] = useState('');
+
+//in loademployees() modify from this 
+
+const response = await employeeService.getAll({
+    page,
+    per_page: 20,
+});
+
+to 
+
+const response = await employeeService.getAll({
+    page,
+    per_page: 20,
+    search: search,
+});
+
+
+M1.4.18 — Step 3: Add the Search Box
+
+171)
+//open frontend/src/pages/employees/EmployeeList.jsx
+
+//add above the employee table
+<div className="row mb-3">
+    <div className="col-md-6">
+        <input
+            type="text"
+            className="form-control"
+            placeholder="Search by code, name, email or phone..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+        />
+    </div>
+</div>
+
+M1.4.18 — Step 4: Make Search Actually Execute
+
+172)Add search button
+<div className="row mb-3">
+    <div className="col-md-6">
+        <div className="input-group">
+            <input
+                type="text"
+                className="form-control"
+                placeholder="Search by code, name, email or phone..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+            />
+
+            <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => loadEmployees(1)}
+            >
+                Search
+            </button>
+        </div>
+    </div>
+</div>
+
+
+----------------
+XXXX Change XXXXX
+-----------------
+//Change show hide password to icon
+173)npm install bootstrap-icons
+
+173.1)Open Login.jsx
+import 'bootstrap-icons/font/bootstrap-icons.css';
+
+//replace the code from this 
+{showPassword?'Hide':'Show'}
+
+to 
+
+<i className={showPassword ? "bi bi-eye-slash" : "bi bi-eye"}></i>
+
+08-Oct-2026
+
+M1.4.18 — Step 5: Add a Clear Search Button
+
+174)Add clear button
+
+{search && (
+    <button
+        type="button"
+        className="btn btn-secondary"
+        onClick={()=>{
+        setSearch('');
+        loadEmployees(1,'');
+        }}
+    >
+    Clear
+    </button>
+    )
+
+}
+
+//modify loademployees()
+
+const loadEmployees = async(page=1, searchValue=search)=>{
+
+and 
+
+const response = await employeeService.getAll({
+                page,
+                per_page:2,
+                search:searchValue,
+});
+
+
+M1.4.18 — Step 6: Improve Search Behavior
+
+Pressing enter in search box performing the search
+
+175)Update the input
+<input
+    type="text"
+    className="form-control"
+    placeholder="Search by code, name, email or phone..."
+    value={search}
+    onChange={(e) => setSearch(e.target.value)}
+    onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+            loadEmployees(1);
+        }
+    }}
+/>
+
+M1.4.19 — Employee List UX Improvements
+
+
+176) Step1: Improve the Employee List Header
+ 
+ //open frontend/src/pages/employees/EmployeeList.jsx
+
+177)Step 2 — Improve the search area
+
+create separate card for search
+
+178)Step 3 — Display employee count
+
+ <div className="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <p className="text-muted mb-0">Manage your employees. {pagination.total} total</p>
+                </div>
+            </div>
+
+179)Step 4 — Improve loading state
+
+//use bootstrap spinner
+//loading
+< div className="d-flex justify-content-center align-items-center py-5">
+                            <div className="spinner-border text-primary" role="status">
+                                <span className="visually-hidden">
+                                    Loading...
+                                </span>
+                            </div>
+                        </div>
+
+180)Step 5 — Improve empty-result state
+
+<div className='text-center py-4 text-muted'>
+                            <h5 className="mb-2">No employees found</h5>
+
+                            <p className="text-muted mb-3">
+                                {search
+                                    ? 'No employees match your search.'
+                                    : 'There are no employees available.'}
+                            </p>
+
+                            {search && (
+                                <button
+                                    type="button"
+                                    className="btn btn-outline-primary"
+                                    onClick={() => {
+                                        setSearch('');
+                                        loadEmployees(1, '');
+                                    }}
+                                >
+                                    Clear Search
+                                </button>
+                            )}
+                        </div>
+
+181)Step 6 — Improve the Employee Table container
+
+M1.4.20 — Scalable Employee Pagination
+
+Scalable pagination like
+
+[First] [Previous] [1] [2] [3] [4] [5] [Next] [Last]
+
+182)Step 2 — Create a page-number generator
+
+//in EmployeeList.jsx above return()
+
+const getPageNumbers = () => {
+    const currentPage = pagination.current_page;
+    const lastPage = pagination.last_page;
+
+    const pages = [];
+
+    if (lastPage <= 7) {
+        for (let page = 1; page <= lastPage; page++) {
+            pages.push(page);
+        }
+
+        return pages;
+    }
+
+    pages.push(1);
+
+    if (currentPage > 4) {
+        pages.push('...');
+    }
+
+    const startPage = Math.max(2, currentPage - 1);
+    const endPage = Math.min(lastPage - 1, currentPage + 1);
+
+    for (let page = startPage; page <= endPage; page++) {
+        pages.push(page);
+    }
+
+    if (currentPage < lastPage - 3) {
+        pages.push('...');
+    }
+
+    pages.push(lastPage);
+
+    return pages;
+};
+
+183)Step 3 — Create the pagination UI
+
+//modify
+
+{pagination.last_page > 1 && (
+    <div className="d-flex justify-content-between align-items-center mt-3">
+
+        <div className="text-muted">
+            Page {pagination.current_page} of {pagination.last_page}
+        </div>
+
+        <div className="btn-group">
+
+            {/* First */}
+            <button
+                type="button"
+                className="btn btn-outline-primary"
+                disabled={pagination.current_page === 1}
+                onClick={() => loadEmployees(1)}
+            >
+                First
+            </button>
+
+            {/* Previous */}
+            <button
+                type="button"
+                className="btn btn-outline-primary"
+                disabled={pagination.current_page === 1}
+                onClick={() =>
+                    loadEmployees(pagination.current_page - 1)
+                }
+            >
+                Previous
+            </button>
+
+            {/* Page Numbers */}
+            {getPageNumbers().map((page, index) =>
+                page === '...' ? (
+                    <button
+                        key={`ellipsis-${index}`}
+                        type="button"
+                        className="btn btn-outline-secondary"
+                        disabled
+                    >
+                        ...
+                    </button>
+                ) : (
+                    <button
+                        key={page}
+                        type="button"
+                        className={
+                            page === pagination.current_page
+                                ? "btn btn-primary"
+                                : "btn btn-outline-primary"
+                        }
+                        onClick={() => loadEmployees(page)}
+                    >
+                        {page}
+                    </button>
+                )
+            )}
+
+            {/* Next */}
+            <button
+                type="button"
+                className="btn btn-outline-primary"
+                disabled={
+                    pagination.current_page === pagination.last_page
+                }
+                onClick={() =>
+                    loadEmployees(pagination.current_page + 1)
+                }
+            >
+                Next
+            </button>
+
+            {/* Last */}
+            <button
+                type="button"
+                className="btn btn-outline-primary"
+                disabled={
+                    pagination.current_page === pagination.last_page
+                }
+                onClick={() =>
+                    loadEmployees(pagination.last_page)
+                }
+            >
+                Last
+            </button>
+
+        </div>
+    </div>
+)}
+
+184)Step 6 — Improve the pagination layout on smaller screens
+
+//modify outer pagination container
+<div className="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3 mt-3">
+
+185)Step 7 — Add result range information
+
+//add above the return()
+
+const firstItem =
+    pagination.total === 0
+        ? 0
+        : (pagination.current_page - 1) * pagination.per_page + 1;
+
+const lastItem =
+    Math.min(
+        pagination.current_page * pagination.per_page,
+        pagination.total
+    );
+
+//replace this 
+Page {pagination.current_page} of {pagination.last_page}
+
+to 
+
+Showing {firstItem}–{lastItem} of {pagination.total} employees
+
+
+Next Milestone M1.5 Employee Master Data
+
+M1.5 Employee Master Data
+│
+├── M1.5.1 Department Master
+├── M1.5.2 Designation Master
+├── M1.5.3 Employment Type Master
+├── M1.5.4 Employee Status Master
+├── M1.5.5 Department ↔ Employee integration
+├── M1.5.6 Designation ↔ Employee integration
+├── M1.5.7 Dropdown APIs
+├── M1.5.8 React dropdown integration
+├── M1.5.9 Master CRUD UI
+└── M1.5.10 Validation & testing
+
+
+
+
+
 
