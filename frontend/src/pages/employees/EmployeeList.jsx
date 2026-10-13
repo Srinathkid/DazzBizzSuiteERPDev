@@ -124,7 +124,7 @@ function EmployeeList() {
                                 Search Employees
                             </label>
 
-                            <div className="input-group">
+                            <div className="d-flex gap-2">
                                 <input
                                     type="text"
                                     className="form-control"

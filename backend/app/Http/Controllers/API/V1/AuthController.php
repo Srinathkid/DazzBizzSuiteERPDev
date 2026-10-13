@@ -46,6 +46,14 @@ class AuthController extends BaseApiController
 
         );
 
+        /*return response()->json([
+            'authenticated' => $request->user() !== null,
+            'user_id' => $request->user()?->id,
+            'session_id' => $request->session()->getId(),
+            'origin' => $request->header('Origin'),
+            'referer' => $request->header('Referer'),
+        ]);*/
+
     }
 
     public function logout(Request $request): JsonResponse

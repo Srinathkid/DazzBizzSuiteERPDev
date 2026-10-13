@@ -24,15 +24,16 @@ class EloquentEmployeeRepository implements EmployeeRepositoryInterface
     public function paginate(int $perPage = 20, ?string $search = null): LengthAwarePaginator
     {
         $query = Employee::query();
-        if($search!==null && $search !== ''){
-            $query->where(function($q) use ($search){
+        if ($search !== null && $search !== '') {
+            $query->where(function ($q) use ($search) {
                 $q->where('employee_code', 'like', "%{$search}%")
-                ->orWhere('first_name', 'like', "%{$search}%")
-                ->orWhere('last_name', 'like', "%{$search}%")
-                ->orWhere('email', 'like', "%{$search}%")
-                ->orWhere('phone', 'like', "%{$search}%");
+                    ->orWhere('first_name', 'like', "%{$search}%")
+                    ->orWhere('last_name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%");
             });
         }
+
         return $query
             ->orderBy('id')
             ->paginate($perPage);

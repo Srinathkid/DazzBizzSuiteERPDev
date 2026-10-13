@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\API\V1\AuthController;
+use App\Http\Controllers\API\V1\DepartmentController;
+use App\Http\Controllers\API\V1\DesignationController;
 use App\Http\Controllers\API\V1\EmployeeController;
 use App\Http\Controllers\API\V1\HealthController;
 use App\Http\Controllers\API\V1\TestRepositoryController;
@@ -49,25 +51,64 @@ Route::prefix('v1')->group(function () {
         Route::get('/users/{id}', [UserController::class, 'show']);
     });
 
-    // Employee Routes
     Route::middleware('auth:sanctum')->group(function () {
-        //Route::apiResource('employees', EmployeeController::class);
+        // Route::apiResource('employees', EmployeeController::class);
+        // Employee Routes
+        Route::get('/employees', [EmployeeController::class, 'index'])
+            ->middleware('permission:employees.view');
 
-        Route::get('/employees', [EmployeeController::class,'index'])
-        ->middleware('permission:employees.view');
+        Route::post('/employees', [EmployeeController::class, 'store'])
+            ->middleware('permission:employees.create');
 
-        Route::post('/employees', [EmployeeController::class,'store'])
-        ->middleware('permission:employees.create');
+        Route::get('/employees/{employee}', [EmployeeController::class, 'show'])
+            ->middleware('permission:employees.view');
 
-        Route::get('/employees/{employee}', [EmployeeController::class,'show'])
-        ->middleware('permission:employees.view');
+        Route::put('/employees/{employee}', [EmployeeController::class, 'update'])
+            ->middleware('permission:employees.update');
 
-        Route::put('/employees/{employee}', [EmployeeController::class,'update'])
-        ->middleware('permission:employees.update');
+        Route::delete('/employees/{employee}', [EmployeeController::class, 'destroy'])
+            ->middleware('permission:employees.delete');
 
-        Route::delete('/employees/{employee}', [EmployeeController::class,'destroy'])
-        ->middleware('permission:employees.delete');
-        
+        // Department Routes
+        Route::get('/department-auth-test', function (Request $request) {
+            return response()->json([
+                'authenticated' => $request->user() !== null,
+                'user_id' => $request->user()?->id,
+                'session_id' => $request->session()->getId(),
+            ]);
+        });
+
+        Route::get('/departments', [DepartmentController::class, 'index'])
+            ->middleware('permission:departments.view');
+
+        Route::post('/departments', [DepartmentController::class, 'store'])
+            ->middleware('permission:departments.create');
+
+        Route::get('/departments/{department}', [DepartmentController::class, 'show'])
+            ->middleware('permission:departments.view');
+
+        Route::put('/departments/{department}', [DepartmentController::class, 'update'])
+            ->middleware('permission:departments.update');
+
+        Route::delete('/departments/{department}', [DepartmentController::class, 'destroy'])
+            ->middleware('permission:departments.delete');
+
+        // Designation Routes
+        Route::get('/designations', [DesignationController::class, 'index'])
+            ->middleware('permission:designations.view');
+
+        Route::post('/designations', [DesignationController::class, 'store'])
+            ->middleware('permission:designations.create');
+
+        Route::get('/designations/{designation}', [DesignationController::class, 'show'])
+            ->middleware('permission:designations.view');
+
+        Route::put('/designations/{designation}', [DesignationController::class, 'update'])
+            ->middleware('permission:designations.update');
+
+        Route::delete('/designations/{designation}', [DesignationController::class, 'destroy'])
+            ->middleware('permission:designations.delete');
+
     });
 
     // Route::middleware('auth:sanctum')

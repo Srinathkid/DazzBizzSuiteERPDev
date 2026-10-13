@@ -319,6 +319,81 @@ class PermissionSeeder extends Seeder
                 'module' => 'Settings',
                 'description' => 'Update settings',
             ],
+
+            // Employees
+            [
+                'name' => 'View Employees',
+                'slug' => 'employees.view',
+                'module' => 'Employees',
+                'description' => 'View Employees',
+            ],
+            [
+                'name' => 'Create Employees',
+                'slug' => 'employees.create',
+                'module' => 'Employees',
+                'description' => 'Create Employees',
+            ],
+            [
+                'name' => 'Update Employees',
+                'slug' => 'employees.update',
+                'module' => 'Employees',
+                'description' => 'Update Employees',
+            ],
+            [
+                'name' => 'Delete Employees',
+                'slug' => 'employees.delete',
+                'module' => 'Employees',
+                'description' => 'Deactivate Employees',
+            ],
+            [
+                'name' => 'View Departments',
+                'slug' => 'departments.view',
+                'module' => 'Departments',
+                'description' => 'View Departments',
+            ],
+            [
+                'name' => 'Create Departments',
+                'slug' => 'departments.create',
+                'module' => 'Departments',
+                'description' => 'Create Departmrents',
+            ],
+            [
+                'name' => 'Update Departments',
+                'slug' => 'departments.update',
+                'module' => 'Departments',
+                'description' => 'Update Departments',
+            ],
+            [
+                'name' => 'Delete Departments',
+                'slug' => 'departments.delete',
+                'module' => 'Departments',
+                'description' => 'Delete Departments',
+            ],
+            [
+                'name' => 'View Designations',
+                'slug' => 'designations.view',
+                'module' => 'Designations',
+                'description' => 'View Designations',
+            ],
+            [
+                'name' => 'Create Designations',
+                'slug' => 'designations.create',
+                'module' => 'Designations',
+                'description' => 'Create Designations',
+            ],
+            [
+                'name' => 'Update Designations',
+                'slug' => 'designations.update',
+                'module' => 'Designations',
+                'description' => 'Update Designations',
+            ],
+            [
+                'name' => 'Delete Designations',
+                'slug' => 'designations.delete',
+                'module' => 'Designations',
+                'description' => 'Delete Designations',
+            ],
+
         ];
 
         foreach ($permissions as $permission) {

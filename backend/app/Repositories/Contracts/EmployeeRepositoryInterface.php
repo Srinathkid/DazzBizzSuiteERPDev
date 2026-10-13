@@ -12,7 +12,7 @@ interface EmployeeRepositoryInterface
 
     public function getAll(): Collection;
 
-    public function paginate(int $perPage = 20, ?string $search=null): LengthAwarePaginator;
+    public function paginate(int $perPage = 20, ?string $search = null): LengthAwarePaginator;
 
     public function create(array $data): Employee;
 

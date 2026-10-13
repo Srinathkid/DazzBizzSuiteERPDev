@@ -18,10 +18,10 @@ class EmployeeController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        //$perPage = (int) $request->input('per_page', 20);
-        $perPage = min(max((int) $request->input('per_page', 20),1),100);
+        // $perPage = (int) $request->input('per_page', 20);
+        $perPage = min(max((int) $request->input('per_page', 20), 1), 100);
 
-        $search=trim((string) $request->input('search',''));
+        $search = trim((string) $request->input('search', ''));
 
         $employees = $this->employeeService->paginate($perPage, $search !== '' ? $search : null);
 

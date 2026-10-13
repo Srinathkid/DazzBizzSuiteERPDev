@@ -249,7 +249,7 @@ Accept:application/json
 Origin:http://localhost:5173
 59.3)Copy values for XSRF-TOKEN from cookies from the response
 59.4)Open powershell and decode the token value using the command [System.Net.WebUtility]::UrlDecode("XSRF TOEKN") 
-//[System.Net.WebUtility]::UrlDecode("
+//[System.Net.WebUtility]::UrlDecode("")
 59.5)Paste the decoded token in login api request header under lable "X-XSRF-TOKEN"
 59.6)Test the login api
 
@@ -2413,6 +2413,7 @@ to
 
 Showing {firstItem}–{lastItem} of {pagination.total} employees
 
+186)Commited to Develop branch in git
 
 Next Milestone M1.5 Employee Master Data
 
@@ -2429,8 +2430,866 @@ M1.5 Employee Master Data
 ├── M1.5.9 Master CRUD UI
 └── M1.5.10 Validation & testing
 
+09-Oct-2026
+
+M1.5.1 Department Master
+
+187)Step 1 — Create migration and model
+
+187.1)go to cd D:\Programms\Dazz\Web\DazzBizzSuiteERPDev\backend
+187.2)php artisan make:model Department -m
+//result
+will create 
+app/Models/Department.php
+database/migrations/xxxx_xx_xx_xxxxxx_create_departments_table.php
+
+188)Step 2 — Edit the migrations
+ Schema::create('departments', function (Blueprint $table) {
+            $table->id();
+            $table->string('name',100)->unique();
+            $table->string('code',50)->unique();
+            $table->text('description')->nullable();
+            $table->boolean('is_active')->default(true);
+            $table->timestamps();
+        });
+
+189)Step 3 — Update Department model
+189.1)open backend/app/Models/Department.php and update
+class Department extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'name',
+        'code',
+        'description',
+        'is_active',
+    ];
+
+    protected $casts = [
+        'is_active' => 'boolean',
+    ];
+}
+
+190)Step 4 — Run migration
+190.1)php artisan migrate
+190.2)php artisan migrate:status
+
+191)Step 5 — Create the required files
+191.1)php artisan make:controller API/V1/DepartmentController
+191.2)php artisan make:request StoreDepartmentRequest
+191.3)php artisan make:request UpdateDepartmentRequest
+191.4)php artisan make:resource DepartmentResource
+191.5)Create following files
+app/Repositories/Contracts/DepartmentRepositoryInterface.php
+app/Repositories/Eloquent/EloquentDepartmentRepository.php
+app/Services/DepartmentService.php
+
+192)Step 6 — Department repository interface
+//app/Repositories/Contracts/DepartmentRepositoryInterface.php
+<?php
+
+namespace App\Repositories\Contracts;
+
+use App\Models\Department;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+
+interface DepartmentRepositoryInterface
+{
+    public function paginate(
+        int $perPage = 20,
+        ?string $search = null
+    ): LengthAwarePaginator;
+
+    public function findById(int $id): ?Department;
+
+    public function create(array $data): Department;
+
+    public function update(int $id, array $data): Department;
+
+    public function delete(int $id): bool;
+}
+
+193)Step 7 — Eloquent repository
+//app/Repositories/Eloquent/EloquentDepartmentRepository.php
+<?php
+
+namespace App\Repositories\Eloquent;
+
+use App\Models\Department;
+use App\Repositories\Contracts\DepartmentRepositoryInterface;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+
+class EloquentDepartmentRepository implements DepartmentRepositoryInterface
+{
+    public function __construct(
+        private readonly Department $model
+    ) {}
+
+    public function paginate(
+        int $perPage = 20,
+        ?string $search = null
+    ): LengthAwarePaginator {
+        $query = $this->model->newQuery();
+
+        if ($search !== null && $search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('code', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%");
+            });
+        }
+
+        return $query->orderByDesc('id')->paginate($perPage);
+    }
+
+    public function findById(int $id): ?Department
+    {
+        return $this->model->newQuery()->find($id);
+    }
+
+    public function create(array $data): Department
+    {
+        return $this->model->create($data);
+    }
+
+    public function update(int $id, array $data): Department
+    {
+        $department = $this->model->newQuery()->findOrFail($id);
+        $department->update($data);
+
+        return $department->refresh();
+    }
+
+    public function delete(int $id): bool
+    {
+        $department = $this->model->newQuery()->findOrFail($id);
+
+        return (bool) $department->delete();
+    }
+}
+
+194)Step 8 — Bind the repository
+
+//Open app/Providers/AppServiceProvider.php
+
+use App\Repositories\Contracts\DepartmentRepositoryInterface;
+use App\Repositories\Eloquent\EloquentDepartmentRepository;
+//add inside register()
+$this->app->bind(DepartmentRepositoryInterface::class, EloquentDepartmentRepository::class);
+
+195)Step 9 — Create the service
+
+//open app/Services/DepartmentService.php
+
+<?php
+
+namespace App\Services;
+
+use App\Models\Department;
+use App\Repositories\Contracts\DepartmentRepositoryInterface;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+
+class DepartmentService
+{
+    public function __construct(
+        private readonly DepartmentRepositoryInterface $departmentRepository
+    ) {}
+
+    public function paginate(
+        int $perPage = 20,
+        ?string $search = null
+    ): LengthAwarePaginator {
+        return $this->departmentRepository->paginate($perPage, $search);
+    }
+
+    public function findById(int $id): ?Department
+    {
+        return $this->departmentRepository->findById($id);
+    }
+
+    public function create(array $data): Department
+    {
+        return $this->departmentRepository->create($data);
+    }
+
+    public function update(int $id, array $data): Department
+    {
+        return $this->departmentRepository->update($id, $data);
+    }
+
+    public function delete(int $id): bool
+    {
+        return $this->departmentRepository->delete($id);
+    }
+}
+
+196)Step 10 — Create and update validation
+//open app/Http/Requests/StoreDepartmentRequest.php
+
+<?php
+
+namespace App\Http\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+class StoreDepartmentRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    public function rules(): array
+    {
+        return [
+            'name' => ['required', 'string', 'max:100', 'unique:departments,name'],
+            'code' => ['required', 'string', 'max:50', 'unique:departments,code'],
+            'description' => ['nullable', 'string'],
+            'is_active' => ['sometimes', 'boolean'],
+        ];
+    }
+}
+
+196.1)app/Http/Requests/UpdateDepartmentRequest.php
+
+<?php
+
+namespace App\Http\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+
+class UpdateDepartmentRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    public function rules(): array
+    {
+        $departmentId = $this->route('department');
+
+        if ($departmentId instanceof \App\Models\Department) {
+            $departmentId = $departmentId->id;
+        }
+
+        return [
+            'name' => [
+                'required',
+                'string',
+                'max:100',
+                Rule::unique('departments', 'name')->ignore($departmentId),
+            ],
+            'code' => [
+                'required',
+                'string',
+                'max:50',
+                Rule::unique('departments', 'code')->ignore($departmentId),
+            ],
+            'description' => ['nullable', 'string'],
+            'is_active' => ['sometimes', 'boolean'],
+        ];
+    }
+}
+
+197)Step 11 — Create the API Resource
+//open app/Http/Resources/DepartmentResource.php
+
+<?php
+
+namespace App\Http\Resources;
+
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
+
+class DepartmentResource extends JsonResource
+{
+    public function toArray(Request $request): array
+    {
+        return [
+            'id' => $this->id,
+            'name' => $this->name,
+            'code' => $this->code,
+            'description' => $this->description,
+            'is_active' => $this->is_active,
+            'created_at' => $this->created_at,
+            'updated_at' => $this->updated_at,
+        ];
+    }
+}
+
+198)Step 12 — Build the Department controller
+//app/Http/Controllers/API/V1/DepartmentController.php
+<?php
+
+namespace App\Http\Controllers\API\V1;
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreDepartmentRequest;
+use App\Http\Requests\UpdateDepartmentRequest;
+use App\Http\Resources\DepartmentResource;
+use App\Services\DepartmentService;
+use App\Support\ApiResponse;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+
+class DepartmentController extends Controller
+{
+    public function __construct(
+        private readonly DepartmentService $departmentService
+    ) {}
+
+    public function index(Request $request): JsonResponse
+    {
+        $perPage = min(
+            max((int) $request->input('per_page', 20), 1),
+            100
+        );
+
+        $search = trim((string) $request->input('search', ''));
+
+        $departments = $this->departmentService->paginate(
+            $perPage,
+            $search !== '' ? $search : null
+        );
+
+        return ApiResponse::success(
+            'Departments retrieved successfully.',
+            [
+                'departments' => DepartmentResource::collection(
+                    $departments->items()
+                ),
+                'pagination' => [
+                    'current_page' => $departments->currentPage(),
+                    'per_page' => $departments->perPage(),
+                    'total' => $departments->total(),
+                    'last_page' => $departments->lastPage(),
+                ],
+            ]
+        );
+    }
+
+    public function store(StoreDepartmentRequest $request): JsonResponse
+    {
+        $department = $this->departmentService->create(
+            $request->validated()
+        );
+
+        return ApiResponse::success(
+            'Department created successfully.',
+            [
+                'department' => new DepartmentResource($department),
+            ]
+        );
+    }
+
+    public function show(int $department): JsonResponse
+    {
+        $record = $this->departmentService->findById($department);
+
+        if (!$record) {
+            return ApiResponse::error(
+                'Department not found.',
+                404
+            );
+        }
+
+        return ApiResponse::success(
+            'Department retrieved successfully.',
+            [
+                'department' => new DepartmentResource($record),
+            ]
+        );
+    }
+
+    public function update(
+        UpdateDepartmentRequest $request,
+        int $department
+    ): JsonResponse {
+        // Confirm the record exists before updating.
+        $existing = $this->departmentService->findById($department);
+
+        if (!$existing) {
+            return ApiResponse::error(
+                'Department not found.',
+                404
+            );
+        }
+
+        $record = $this->departmentService->update(
+            $department,
+            $request->validated()
+        );
+
+        return ApiResponse::success(
+            'Department updated successfully.',
+            [
+                'department' => new DepartmentResource($record),
+            ]
+        );
+    }
+
+    public function destroy(int $department): JsonResponse
+    {
+        $existing = $this->departmentService->findById($department);
+
+        if (!$existing) {
+            return ApiResponse::error(
+                'Department not found.',
+                404
+            );
+        }
+
+        $this->departmentService->delete($department);
+
+        return ApiResponse::success(
+            'Department deleted successfully.',
+            null
+        );
+    }
+}
+
+199)Step 13 — Add the API routes
+//open routes/api.php
+use App\Http\Controllers\API\V1\DepartmentController;
+
+//add inside the group
+ Route::get('/departments', [DepartmentController::class, 'index'])
+            ->middleware('permission:departments.view');
+
+        Route::post('/departments', [DepartmentController::class, 'store'])
+            ->middleware('permission:departments.create');
+
+        Route::get('/departments/{department}', [DepartmentController::class, 'show'])
+            ->middleware('permission:departments.view');
+
+        Route::put('/departments/{department}', [DepartmentController::class, 'update'])
+            ->middleware('permission:departments.update');
+
+        Route::delete('/departments/{department}', [DepartmentController::class, 'destroy'])
+            ->middleware('permission:departments.delete');
+
+200)Step 15 — Verify the implementation
+php artisan optimize:clear
+
+php artisan migrate:status
+
+php artisan route:list --path=api/v1/departments
+
+php artisan test
+
+201)test the api's
+
+11-Oct-2026
+
+M1.5.2 — Designation Master
+
+202)Step 1 — Create the migration and model
+202.1)php artisan make:model Designation -m
+
+203)Step 2 — Create the migration
+203.1)open database/migrations/xxxx_xx_xx_xxxxxx_create_designations_table.php
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('designations', function (Blueprint $table) {
+            $table->id();
+            $table->string('name', 100)->unique();
+            $table->string('code', 50)->unique();
+            $table->text('description')->nullable();
+            $table->boolean('is_active')->default(true);
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('designations');
+    }
+};
+
+204)Step 3 — Update the model
+204.1)Open app/Models/Designation.php
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class Designation extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'name',
+        'code',
+        'description',
+        'is_active',
+    ];
+
+    protected $casts = [
+        'is_active' => 'boolean',
+    ];
+}
+
+205)Step 4 — Run the migration
+205.1)php artisan migrate
+205.2)php artisan migrate:status
+
+206)Step 5 — Create the remaining backend files
+206.1)php artisan make:controller API/V1/DesignationController
+206.2)php artisan make:request StoreDesignationRequest
+206.3)php artisan make:request UpdateDesignationRequest
+206.4)php artisan make:resource DesignationResource
+
+207)create file manually
+app/Repositories/Contracts/DesignationRepositoryInterface.php
+app/Repositories/Eloquent/EloquentDesignationRepository.php
+app/Services/DesignationService.php
+
+208)Step 6 — Repository interface
+//open app/Repositories/Contracts/DesignationRepositoryInterface.php
+<?php
+
+namespace App\Repositories\Contracts;
+
+use App\Models\Designation;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+
+interface DesignationRepositoryInterface
+{
+    public function paginate(
+        int $perPage = 20,
+        ?string $search = null
+    ): LengthAwarePaginator;
+
+    public function findById(int $id): ?Designation;
+
+    public function create(array $data): Designation;
+
+    public function update(int $id, array $data): Designation;
+
+    public function delete(int $id): bool;
+}
+
+12-Oct-2026
+209)Step 7 — Eloquent repository
+//open app/Repositories/Eloquent/EloquentDesignationRepository.php
+<?php
+
+namespace App\Repositories\Eloquent;
+
+use App\Models\Designation;
+use App\Repositories\Contracts\DesignationRepositoryInterface;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+
+class EloquentDesignationRepository implements DesignationRepositoryInterface
+{
+    public function __construct(
+        private readonly Designation $model
+    ) {}
+
+    public function paginate(
+        int $perPage = 20,
+        ?string $search = null
+    ): LengthAwarePaginator {
+        $query = $this->model->newQuery();
+
+        if ($search !== null && $search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('code', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%");
+            });
+        }
+
+        return $query->orderByDesc('id')->paginate($perPage);
+    }
+
+    public function findById(int $id): ?Designation
+    {
+        return $this->model->newQuery()->find($id);
+    }
+
+    public function create(array $data): Designation
+    {
+        return $this->model->create($data);
+    }
+
+    public function update(int $id, array $data): Designation
+    {
+        $designation = $this->model->newQuery()->findOrFail($id);
+        $designation->update($data);
+
+        return $designation->refresh();
+    }
+
+    public function delete(int $id): bool
+    {
+        $designation = $this->model->newQuery()->findOrFail($id);
+
+        return (bool) $designation->delete();
+    }
+}
+
+210)Step 8 — Bind the repository
+//Open app/Providers/AppServiceProvider.php
+use App\Repositories\Contracts\DesignationRepositoryInterface;
+use App\Repositories\Eloquent\EloquentDesignationRepository;
+$this->app->bind(
+    DesignationRepositoryInterface::class,
+    EloquentDesignationRepository::class
+);
+
+211)Step 9 — Create the service
+app/Services/DesignationService.php
+
+212)Step 10 — Store and update requests
+//open app/Http/Requests/StoreDesignationRequest.php
+
+<?php
+
+namespace App\Http\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+class StoreDesignationRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    public function rules(): array
+    {
+        return [
+            'name' => ['required', 'string', 'max:100', 'unique:designations,name'],
+            'code' => ['required', 'string', 'max:50', 'unique:designations,code'],
+            'description' => ['nullable', 'string'],
+            'is_active' => ['sometimes', 'boolean'],
+        ];
+    }
+}
 
 
+213)app/Http/Requests/UpdateDesignationRequest.php
 
+<?php
+
+namespace App\Http\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+
+class UpdateDesignationRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    public function rules(): array
+    {
+        $designationId = $this->route('designation');
+
+        if ($designationId instanceof \App\Models\Designation) {
+            $designationId = $designationId->id;
+        }
+
+        return [
+            'name' => [
+                'required',
+                'string',
+                'max:100',
+                Rule::unique('designations', 'name')->ignore($designationId),
+            ],
+            'code' => [
+                'required',
+                'string',
+                'max:50',
+                Rule::unique('designations', 'code')->ignore($designationId),
+            ],
+            'description' => ['nullable', 'string'],
+            'is_active' => ['sometimes', 'boolean'],
+        ];
+    }
+}
+
+13-Oct-2026
+214)Step 11 — API Resource
+//app/Http/Resources/DesignationResource.php
+<?php
+
+namespace App\Http\Resources;
+
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
+
+class DesignationResource extends JsonResource
+{
+    public function toArray(Request $request): array
+    {
+        return [
+            'id' => $this->id,
+            'name' => $this->name,
+            'code' => $this->code,
+            'description' => $this->description,
+            'is_active' => $this->is_active,
+            'created_at' => $this->created_at,
+            'updated_at' => $this->updated_at,
+        ];
+    }
+}
+
+215)Step 12 — Controller
+//open app/Http/Controllers/API/V1/DesignationController.php
+<?php
+
+namespace App\Http\Controllers\API\V1;
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreDesignationRequest;
+use App\Http\Requests\UpdateDesignationRequest;
+use App\Http\Resources\DesignationResource;
+use App\Services\DesignationService;
+use App\Support\ApiResponse;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+
+class DesignationController extends Controller
+{
+    public function __construct(
+        private readonly DesignationService $designationService
+    ) {}
+
+    public function index(Request $request): JsonResponse
+    {
+        $perPage = min(max((int) $request->input('per_page', 20), 1), 100);
+        $search = trim((string) $request->input('search', ''));
+
+        $designations = $this->designationService->paginate(
+            $perPage,
+            $search !== '' ? $search : null
+        );
+
+        return ApiResponse::success(
+            'Designations retrieved successfully.',
+            [
+                'designations' => DesignationResource::collection(
+                    $designations->items()
+                ),
+                'pagination' => [
+                    'current_page' => $designations->currentPage(),
+                    'per_page' => $designations->perPage(),
+                    'total' => $designations->total(),
+                    'last_page' => $designations->lastPage(),
+                ],
+            ]
+        );
+    }
+
+    public function store(StoreDesignationRequest $request): JsonResponse
+    {
+        $designation = $this->designationService->create(
+            $request->validated()
+        );
+
+        return ApiResponse::success(
+            'Designation created successfully.',
+            ['designation' => new DesignationResource($designation)]
+        );
+    }
+
+    public function show(int $designation): JsonResponse
+    {
+        $record = $this->designationService->findById($designation);
+
+        if (!$record) {
+            return ApiResponse::error('Designation not found.', 404);
+        }
+
+        return ApiResponse::success(
+            'Designation retrieved successfully.',
+            ['designation' => new DesignationResource($record)]
+        );
+    }
+
+    public function update(
+        UpdateDesignationRequest $request,
+        int $designation
+    ): JsonResponse {
+        $existing = $this->designationService->findById($designation);
+
+        if (!$existing) {
+            return ApiResponse::error('Designation not found.', 404);
+        }
+
+        $record = $this->designationService->update(
+            $designation,
+            $request->validated()
+        );
+
+        return ApiResponse::success(
+            'Designation updated successfully.',
+            ['designation' => new DesignationResource($record)]
+        );
+    }
+
+    public function destroy(int $designation): JsonResponse
+    {
+        $existing = $this->designationService->findById($designation);
+
+        if (!$existing) {
+            return ApiResponse::error('Designation not found.', 404);
+        }
+
+        $this->designationService->delete($designation);
+
+        return ApiResponse::success('Designation deleted successfully.', null);
+    }
+}
+
+216)Step 13 — Add routes
+//open routes/api.php
+
+use App\Http\Controllers\API\V1\DesignationController;
+
+Route::get('/designations', [DesignationController::class, 'index'])
+    ->middleware('permission:designations.view');
+
+Route::post('/designations', [DesignationController::class, 'store'])
+    ->middleware('permission:designations.create');
+
+Route::get('/designations/{designation}', [DesignationController::class, 'show'])
+    ->middleware('permission:designations.view');
+
+Route::put('/designations/{designation}', [DesignationController::class, 'update'])
+    ->middleware('permission:designations.update');
+
+Route::delete('/designations/{designation}', [DesignationController::class, 'destroy'])
+    ->middleware('permission:designations.delete');
+
+217)Step 14 — Verify and test
+php artisan optimize:clear
+php artisan migrate:status
+php artisan route:list --path=api/v1/designations -v
+php artisan test
+
+218)test the api's
+
+12-Oct-2026
+M1.5.3 — Employment Type Master
+
+219)Step 1: Create the model and migration
 
 
